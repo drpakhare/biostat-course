@@ -1,0 +1,15 @@
+{
+  "hash": "e0da223a9bd5f0395f2009d3bf80e5d9",
+  "result": {
+    "engine": "knitr",
+    "markdown": "---\ntitle: \"Machine Learning in Medical Sciences\"\nsubtitle: \"When Algorithms Meet Clinical Data\"\ndescription: |\n  A gentle introduction to machine learning concepts for clinicians: supervised vs\n  unsupervised learning, classification and regression, model validation,\n  and real-world applications in diagnosis, prognosis, and drug discovery.\n  No programming prerequisite — focuses on intuition and clinical interpretation.\ncategories:\n  - Machine Learning\n  - Artificial Intelligence\n  - Clinical Prediction\n  - Data Science\n---\n\n\n\n::: {.callout-note appearance=\"minimal\"}\n**Lecture slides for this module:** [Open Slides](../slides/15-ml-slides.html){target=\"_blank\"}\n:::\n\n## Learning Objectives\n\nBy the end of this module, you will be able to:\n\n1. Distinguish between **supervised and unsupervised** learning\n2. Understand common algorithms: **logistic regression, decision trees, random forests, neural networks**\n3. Explain the **bias-variance trade-off** and why overfitting is dangerous\n4. Interpret **model validation** metrics (accuracy, AUC, sensitivity, specificity — connecting back to Module 5)\n5. Understand **training, validation, and test sets** — why splitting data matters\n6. Evaluate ML claims in medical literature critically\n7. Recognise **limitations and ethical concerns** of ML in healthcare\n8. Identify promising **Indian applications** of ML in medicine\n\n---\n\n:::{.clinical-hook}\n## Coming Soon\n\nThis module is under development. It will provide a conceptual introduction to machine learning for MBBS students — no coding required, but with R demonstrations for those interested.\n\n**Planned content includes:**\n\n- What is machine learning? (Pattern recognition from data)\n- Supervised learning: classification (disease/no disease) and regression (predicting BP)\n- From logistic regression (Module 11) to decision trees to random forests\n- Neural networks: the basic intuition (without the math)\n- The critical problem: overfitting — why a model can be perfect on training data and useless on new patients\n- Cross-validation and the train/test split\n- Connecting to Module 5: AUC, ROC curves, sensitivity/specificity as ML evaluation metrics\n- Real Indian applications: retinal screening for diabetic retinopathy (Google/Aravind), TB detection from chest X-rays, ECG analysis for arrhythmia\n- Ethical concerns: algorithmic bias, black-box decisions, data privacy\n- The future: AI as clinical decision support, not replacement\n- Indian clinical examples throughout\n:::\n\n---\n\n## References\n\n::: {#refs}\n:::\n",
+    "supporting": [],
+    "filters": [
+      "rmarkdown/pagebreak.lua"
+    ],
+    "includes": {},
+    "engineDependencies": {},
+    "preserve": {},
+    "postProcess": true
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "index.qmd": {
+    "index.html": "13ebeb50"
+  },
+  "modules/01-why-biostats.qmd": {
+    "01-why-biostats.html": "0862c305"
+  },
+  "modules/02-descriptive.qmd": {
+    "02-descriptive.html": "ae30aac3"
+  },
+  "modules/03-visualization.qmd": {
+    "03-visualization.html": "b5acfbec"
+  },
+  "modules/04-probability.qmd": {
+    "04-probability.html": "28574b2d"
+  },
+  "modules/05-diagnostic-tests.qmd": {
+    "05-diagnostic-tests.html": "6c8fd4a4"
+  },
+  "modules/06-study-design.qmd": {
+    "06-study-design.html": "593e6029"
+  },
+  "modules/07-confidence-intervals.qmd": {
+    "07-confidence-intervals.html": "201b51cd"
+  },
+  "modules/08-hypothesis-testing.qmd": {
+    "08-hypothesis-testing.html": "4d6c8ab8"
+  },
+  "modules/09-comparing-means.qmd": {
+    "09-comparing-means.html": "74921198"
+  },
+  "modules/10-categorical-data.qmd": {
+    "10-categorical-data.html": "e6115e36"
+  },
+  "modules/11-correlation-regression.qmd": {
+    "11-correlation-regression.html": "acfa9c91"
+  },
+  "modules/12-survival-analysis.qmd": {
+    "12-survival-analysis.html": "8b6adccb"
+  },
+  "modules/13-meta-analysis.qmd": {
+    "13-meta-analysis.html": "d26b0ced"
+  },
+  "modules/14-bias-confounding.qmd": {
+    "14-bias-confounding.html": "f962165b"
+  },
+  "modules/15-sample-size.qmd": {
+    "15-sample-size.html": "138ad7e3"
+  },
+  "references.qmd": {
+    "references.html": "e2edbdfb"
+  },
+  "slides.qmd": {
+    "slides.html": "7c61ca4b"
+  },
+  "modules/06-sampling.qmd": {
+    "06-sampling.html": "b01f6b1b"
+  },
+  "modules/07-study-design.qmd": {
+    "07-study-design.html": "dc906d54"
+  },
+  "modules/08-statistical-inference.qmd": {
+    "08-statistical-inference.html": "4db365cd"
+  },
+  "modules/14-bayesian.qmd": {
+    "14-bayesian.html": "60f09ed5"
+  },
+  "modules/15-machine-learning.qmd": {
+    "15-machine-learning.html": "6ca72957"
+  },
+  "process.qmd": {
+    "process.html": "7366cd19"
+  }
+}

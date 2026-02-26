@@ -1,0 +1,564 @@
+---
+title: "Comparing Groups"
+subtitle: "t-tests, ANOVA, and Non-parametric Alternatives"
+format:
+  revealjs:
+    theme: [default, ../styles-slides.css]
+    embed-resources: true
+    slide-number: true
+    show-slide-number: all
+    chalkboard: false
+    footer: "Biostatistics for Clinicians | Module 9"
+    transition: fade
+    incremental: false
+    code-fold: true
+    fig-align: center
+    width: 1280
+    height: 720
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{r}
+#| label: setup
+#| include: false
+library(tidyverse)
+library(kableExtra)
+library(patchwork)
+library(scales)
+set.seed(42)
+
+theme_clean <- function() {
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title = element_text(face = "bold", size = 15),
+    plot.subtitle = element_text(size = 12, color = "gray40"),
+    panel.grid.minor = element_blank(),
+    panel.grid.major = element_line(color = "gray90", linewidth = 0.3),
+    legend.position = "bottom"
+  )
+}
+```
+
+## The Clinical Problem
+
+An ICMR trial in Jharkhand randomises 90 women with iron-deficiency anaemia to three arms (n = 30 each):
+
+| Arm | Mean Hb ± SD (g/dL) |
+|-----|---------------------|
+| Oral iron | 10.8 ± 1.4 |
+| IV iron | 11.5 ± 1.6 |
+| Placebo | 9.6 ± 1.5 |
+
+. . .
+
+**Questions that cascade:**
+
+1. Is oral iron better than placebo? → **t-test**
+2. Are all three groups different? → **ANOVA**
+3. *Which* pairs differ? → **Post-hoc tests**
+4. What if data aren't normal? → **Non-parametric alternatives**
+
+## Roadmap
+
+```{r}
+#| fig-width: 10
+#| fig-height: 5
+
+roadmap <- tibble(
+  x = 1:7,
+  label = c("One-Sample t", "Paired t", "Independent t",
+            "Assumptions", "ANOVA", "Post-Hoc", "Non-Parametric"),
+  group = c(rep("t-tests", 3), "Check", "ANOVA", "ANOVA", "Alternatives")
+)
+
+ggplot(roadmap, aes(x = x, y = 0, label = label, fill = group)) +
+  geom_tile(width = 0.9, height = 0.5, color = "white", linewidth = 1.5) +
+  geom_text(size = 4, fontface = "bold", color = "white") +
+  scale_fill_manual(values = c("t-tests" = "#2c3e50", "Check" = "#e67e22",
+                                "ANOVA" = "#2980b9", "Alternatives" = "#27ae60")) +
+  coord_fixed(ratio = 1.2) +
+  theme_void() +
+  theme(legend.position = "none")
+```
+
+## One-Sample t-Test: When to Use
+
+**Scenario:** One group vs. a known reference value
+
+. . .
+
+**Example:** 120 MBBS students at KGMU Lucknow — is their mean BMI different from the national average of 22.5?
+
+. . .
+
+**Hypotheses:**
+
+- H₀: μ = 22.5 (mean BMI equals national average)
+- H₁: μ ≠ 22.5 (two-tailed)
+
+. . .
+
+**Formula:**
+
+$$t = \frac{\bar{x} - \mu_0}{s / \sqrt{n}}, \quad df = n - 1$$
+
+## One-Sample t: Worked Example
+
+```{r}
+#| fig-width: 10
+#| fig-height: 5
+
+bmi <- rnorm(120, mean = 23.4, sd = 3.8)
+t_result <- t.test(bmi, mu = 22.5)
+
+p1 <- ggplot(data.frame(bmi), aes(x = bmi)) +
+  geom_histogram(fill = "#3498db", color = "white", bins = 20, alpha = 0.8) +
+  geom_vline(xintercept = 22.5, linetype = "dashed", color = "#e74c3c", linewidth = 1) +
+  geom_vline(xintercept = mean(bmi), color = "#2c3e50", linewidth = 1) +
+  annotate("text", x = 22.5, y = Inf, label = "National avg = 22.5",
+           vjust = 2, hjust = 1.1, color = "#e74c3c", fontface = "bold") +
+  annotate("text", x = mean(bmi), y = Inf,
+           label = paste0("Sample mean = ", round(mean(bmi), 1)),
+           vjust = 2, hjust = -0.1, color = "#2c3e50", fontface = "bold") +
+  labs(title = "BMI of 120 MBBS Students, KGMU Lucknow",
+       x = "BMI (kg/m²)", y = "Count") +
+  theme_clean()
+
+print(p1)
+```
+
+t = `r round(t_result$statistic, 2)`, df = `r t_result$parameter`, p = `r round(t_result$p.value, 4)`
+
+## Paired t-Test: Same Subjects, Two Timepoints
+
+**Scenario:** 40 hypertensive patients at a PHC in Kolar, Karnataka — systolic BP before and after 6 weeks of amlodipine
+
+. . .
+
+$$t = \frac{\bar{d}}{s_d / \sqrt{n}}, \quad df = n - 1$$
+
+where $\bar{d}$ = mean of within-subject differences
+
+. . .
+
+**Key:** Each patient is their own control — reduces between-subject variability
+
+## Paired t: Worked Example
+
+```{r}
+#| fig-width: 10
+#| fig-height: 5
+
+bp_before <- rnorm(40, mean = 152, sd = 12)
+bp_after  <- bp_before - rnorm(40, mean = 14, sd = 8)
+diff_bp   <- bp_before - bp_after
+t_paired  <- t.test(bp_before, bp_after, paired = TRUE)
+
+df_bp <- data.frame(
+  Patient = rep(1:40, 2),
+  Time = rep(c("Before", "After"), each = 40),
+  SBP = c(bp_before, bp_after)
+)
+
+ggplot(df_bp, aes(x = Time, y = SBP)) +
+  geom_line(aes(group = Patient), alpha = 0.3, color = "gray60") +
+  geom_point(aes(color = Time), size = 2) +
+  stat_summary(fun = mean, geom = "point", size = 5, shape = 18, color = "#e74c3c") +
+  stat_summary(fun = mean, geom = "line", aes(group = 1), linewidth = 1.5, color = "#e74c3c") +
+  scale_color_manual(values = c("Before" = "#e74c3c", "After" = "#2ecc71")) +
+  labs(title = "Systolic BP Before and After Amlodipine",
+       subtitle = paste0("Mean drop = ", round(mean(diff_bp), 1),
+                        " mmHg | p = ", format(t_paired$p.value, digits = 3)),
+       x = "", y = "Systolic BP (mmHg)") +
+  theme_clean() +
+  theme(legend.position = "none")
+```
+
+## Independent Two-Sample t-Test
+
+**Scenario:** HbA1c at 6 months — metformin (n = 50) vs. glimepiride (n = 50) at KEM Hospital, Pune
+
+. . .
+
+$$t = \frac{\bar{x}_1 - \bar{x}_2}{SE}, \quad SE = s_p \sqrt{\frac{1}{n_1} + \frac{1}{n_2}}$$
+
+. . .
+
+**Two versions:**
+
+| Condition | Test |
+|-----------|------|
+| Equal variances (Levene's p > 0.05) | Student's t-test |
+| Unequal variances | Welch's t-test (default in R) |
+
+## Independent t: Worked Example
+
+```{r}
+#| fig-width: 10
+#| fig-height: 5
+
+met   <- rnorm(50, mean = 7.1, sd = 0.9)
+glim  <- rnorm(50, mean = 7.5, sd = 1.1)
+t_ind <- t.test(met, glim)
+
+df_hba1c <- data.frame(
+  Drug = rep(c("Metformin", "Glimepiride"), each = 50),
+  HbA1c = c(met, glim)
+)
+
+ggplot(df_hba1c, aes(x = Drug, y = HbA1c, fill = Drug)) +
+  geom_boxplot(alpha = 0.7, outlier.shape = NA) +
+  geom_jitter(width = 0.15, alpha = 0.4, size = 1.5) +
+  stat_summary(fun = mean, geom = "point", shape = 18, size = 4, color = "#e74c3c") +
+  scale_fill_manual(values = c("Metformin" = "#3498db", "Glimepiride" = "#e67e22")) +
+  labs(title = "HbA1c: Metformin vs. Glimepiride",
+       subtitle = paste0("Mean diff = ", round(mean(met) - mean(glim), 2),
+                        "% | p = ", round(t_ind$p.value, 4)),
+       y = "HbA1c (%)") +
+  theme_clean() +
+  theme(legend.position = "none")
+```
+
+## Effect Size: Cohen's d
+
+Statistical significance alone is not enough — **how large is the difference?**
+
+. . .
+
+$$d = \frac{\bar{x}_1 - \bar{x}_2}{s_p}$$
+
+. . .
+
+| Cohen's d | Interpretation |
+|-----------|---------------|
+| 0.2 | Small |
+| 0.5 | Medium |
+| 0.8 | Large |
+
+. . .
+
+**Clinical significance** adds context: a difference of 0.5% HbA1c may not meet the MCID of 0.5% — statistically significant but clinically marginal.
+
+## Checking Assumptions
+
+:::: {.columns}
+::: {.column width="50%"}
+**Normality**
+
+- Shapiro-Wilk test (p > 0.05 → normal)
+- Q-Q plot (points on diagonal → normal)
+- Histograms
+- CLT: n > 30 often suffices
+:::
+
+::: {.column width="50%"}
+**Equal Variances**
+
+- Levene's test (p > 0.05 → equal)
+- Rule of thumb: ratio of larger to smaller SD < 2
+- If unequal → use Welch's t-test
+:::
+::::
+
+. . .
+
+**When assumptions fail badly:**
+
+→ Use **non-parametric alternatives** (Section 7)
+
+## One-Way ANOVA: Three or More Groups
+
+**Why not multiple t-tests?**
+
+. . .
+
+With 3 groups → 3 pairwise comparisons → inflated Type I error
+
+$$\alpha_{\text{family}} = 1 - (1 - 0.05)^3 = 0.143$$
+
+. . .
+
+**ANOVA** tests all groups simultaneously:
+
+- H₀: μ₁ = μ₂ = μ₃ (all means equal)
+- H₁: At least one mean differs
+
+. . .
+
+$$F = \frac{MS_{\text{between}}}{MS_{\text{within}}} = \frac{\text{Signal (between-group variance)}}{\text{Noise (within-group variance)}}$$
+
+## ANOVA: Anaemia Trial Example
+
+```{r}
+#| fig-width: 10
+#| fig-height: 5
+
+oral <- rnorm(30, mean = 10.8, sd = 1.4)
+iv   <- rnorm(30, mean = 11.5, sd = 1.6)
+plac <- rnorm(30, mean = 9.6, sd = 1.5)
+
+df_anova <- data.frame(
+  Treatment = rep(c("Oral Iron", "IV Iron", "Placebo"), each = 30),
+  Hb = c(oral, iv, plac)
+)
+df_anova$Treatment <- factor(df_anova$Treatment,
+                              levels = c("Placebo", "Oral Iron", "IV Iron"))
+
+anova_result <- aov(Hb ~ Treatment, data = df_anova)
+f_val <- summary(anova_result)[[1]]["Treatment", "F value"]
+p_val <- summary(anova_result)[[1]]["Treatment", "Pr(>F)"]
+
+ggplot(df_anova, aes(x = Treatment, y = Hb, fill = Treatment)) +
+  geom_boxplot(alpha = 0.7, outlier.shape = NA) +
+  geom_jitter(width = 0.15, alpha = 0.4, size = 1.5) +
+  stat_summary(fun = mean, geom = "point", shape = 18, size = 4, color = "#e74c3c") +
+  scale_fill_manual(values = c("Placebo" = "#95a5a6", "Oral Iron" = "#3498db",
+                                "IV Iron" = "#2ecc71")) +
+  labs(title = "Haemoglobin at 12 Weeks — ICMR Trial, Jharkhand",
+       subtitle = paste0("F = ", round(f_val, 2), ", p = ",
+                        format(p_val, digits = 3, scientific = TRUE)),
+       y = "Haemoglobin (g/dL)") +
+  theme_clean() +
+  theme(legend.position = "none")
+```
+
+## The ANOVA Table
+
+| Source | df | SS | MS | F |
+|--------|----|----|----|----|
+| Between groups | k − 1 | SS_B | SS_B / (k−1) | MS_B / MS_W |
+| Within groups | N − k | SS_W | SS_W / (N−k) | |
+| Total | N − 1 | SS_T | | |
+
+. . .
+
+**Significant F → at least one group differs, but WHICH ones?**
+
+→ Post-hoc tests
+
+## Post-Hoc Comparisons
+
+ANOVA says "something differs" — post-hoc says **what**.
+
+. . .
+
+| Method | When to Use | Correction |
+|--------|------------|------------|
+| **Tukey HSD** | All pairwise comparisons | Controls familywise error |
+| **Bonferroni** | Conservative; few planned comparisons | α / number of tests |
+| **Dunnett** | Compare each treatment to one control | Only vs. control |
+
+. . .
+
+```{r}
+tukey <- TukeyHSD(anova_result)
+tukey_df <- as.data.frame(tukey$Treatment)
+tukey_df$Comparison <- rownames(tukey_df)
+
+kable(tukey_df[, c("Comparison", "diff", "lwr", "upr", "p adj")],
+      col.names = c("Comparison", "Mean Diff", "Lower CI", "Upper CI", "Adj. p"),
+      digits = 3, format = "html") %>%
+  kable_styling(full_width = FALSE, bootstrap_options = c("bordered"))
+```
+
+## Non-Parametric Alternatives: When to Use
+
+Use when:
+
+- Data are **ordinal** (e.g., pain VAS, Likert scales)
+- Distribution is **heavily skewed** or has outliers
+- **Small samples** (n < 15–20 per group) and normality uncertain
+
+. . .
+
+| Parametric | Non-Parametric |
+|-----------|---------------|
+| Independent t-test | Mann-Whitney U |
+| Paired t-test | Wilcoxon signed-rank |
+| One-way ANOVA | Kruskal-Wallis |
+
+## Mann-Whitney U Test
+
+**Example:** Length of stay — laparoscopic vs. open cholecystectomy at Safdarjung Hospital, Delhi
+
+```{r}
+#| fig-width: 10
+#| fig-height: 5
+
+los_lap  <- c(2, 3, 2, 3, 4, 2, 3, 3, 2, 4, 3, 2, 5, 3, 2, 3, 4, 2, 3, 3,
+               2, 3, 3, 4, 2, 3, 2, 3, 4, 3)
+los_open <- c(5, 6, 7, 5, 8, 6, 7, 5, 6, 9, 7, 6, 8, 5, 6, 7, 5, 8, 6, 7,
+               10, 6, 7, 8, 5, 6, 7, 5, 6, 8)
+
+mw <- wilcox.test(los_lap, los_open)
+
+df_los <- data.frame(
+  Method = rep(c("Laparoscopic", "Open"), each = 30),
+  LOS = c(los_lap, los_open)
+)
+
+ggplot(df_los, aes(x = Method, y = LOS, fill = Method)) +
+  geom_boxplot(alpha = 0.7) +
+  geom_jitter(width = 0.15, alpha = 0.4, size = 2) +
+  scale_fill_manual(values = c("Laparoscopic" = "#2ecc71", "Open" = "#e74c3c")) +
+  labs(title = "Hospital Stay: Laparoscopic vs. Open Cholecystectomy",
+       subtitle = paste0("Mann-Whitney p = ", format(mw$p.value, digits = 3)),
+       y = "Length of Stay (days)") +
+  theme_clean() +
+  theme(legend.position = "none")
+```
+
+## Wilcoxon Signed-Rank Test
+
+**Example:** Pain VAS (0–10) before and after physiotherapy at CMC Vellore — 25 knee OA patients
+
+```{r}
+#| fig-width: 10
+#| fig-height: 5
+
+pain_before <- c(7, 8, 6, 9, 7, 8, 6, 7, 8, 9, 7, 6, 8, 7, 9, 6, 8, 7, 7, 8,
+                  6, 9, 7, 8, 7)
+pain_after  <- c(4, 5, 3, 6, 4, 5, 4, 3, 5, 6, 4, 3, 5, 4, 5, 3, 5, 4, 4, 5,
+                  3, 6, 4, 5, 4)
+
+wt <- wilcox.test(pain_before, pain_after, paired = TRUE)
+
+df_pain <- data.frame(
+  Patient = rep(1:25, 2),
+  Time = rep(c("Before", "After"), each = 25),
+  VAS = c(pain_before, pain_after)
+)
+
+ggplot(df_pain, aes(x = Time, y = VAS)) +
+  geom_line(aes(group = Patient), alpha = 0.3, color = "gray60") +
+  geom_point(aes(color = Time), size = 2.5) +
+  stat_summary(fun = median, geom = "point", size = 5, shape = 18, color = "#2c3e50") +
+  scale_color_manual(values = c("Before" = "#e74c3c", "After" = "#2ecc71")) +
+  labs(title = "Pain VAS Before and After Physiotherapy, CMC Vellore",
+       subtitle = paste0("Wilcoxon signed-rank p = ", format(wt$p.value, digits = 3)),
+       y = "Pain VAS (0–10)") +
+  theme_clean() +
+  theme(legend.position = "none")
+```
+
+## Kruskal-Wallis Test
+
+**Example:** Patient satisfaction (Likert 1–5) across 3 CHCs in Chhattisgarh
+
+```{r}
+#| fig-width: 10
+#| fig-height: 5
+
+chc_a <- sample(3:5, 25, replace = TRUE, prob = c(0.2, 0.4, 0.4))
+chc_b <- sample(2:4, 25, replace = TRUE, prob = c(0.3, 0.5, 0.2))
+chc_c <- sample(1:4, 25, replace = TRUE, prob = c(0.1, 0.3, 0.4, 0.2))
+
+kw <- kruskal.test(list(chc_a, chc_b, chc_c))
+
+df_sat <- data.frame(
+  CHC = rep(c("CHC Raipur", "CHC Bilaspur", "CHC Korba"), each = 25),
+  Satisfaction = c(chc_a, chc_b, chc_c)
+)
+
+ggplot(df_sat, aes(x = CHC, y = Satisfaction, fill = CHC)) +
+  geom_boxplot(alpha = 0.7) +
+  geom_jitter(width = 0.15, alpha = 0.4, size = 2) +
+  scale_fill_manual(values = c("#3498db", "#e67e22", "#2ecc71")) +
+  labs(title = "Patient Satisfaction Across 3 CHCs, Chhattisgarh",
+       subtitle = paste0("Kruskal-Wallis p = ", round(kw$p.value, 4)),
+       y = "Satisfaction (1–5 Likert)") +
+  theme_clean() +
+  theme(legend.position = "none")
+```
+
+## Decision Flowchart
+
+```{r}
+#| fig-width: 11
+#| fig-height: 6
+
+flow <- tibble(
+  x = c(1, 1, 1,   3, 3, 3,   5, 5, 5),
+  y = c(3, 2, 1,   3, 2, 1,   3, 2, 1),
+  label = c("One-sample t", "Paired t", "Independent t",
+            "—", "Wilcoxon signed-rank", "Mann-Whitney U",
+            "—", "—", "Kruskal-Wallis"),
+  actual = c("One-sample t", "Paired t", "Independent t",
+             "", "Wilcoxon\nsigned-rank", "Mann-Whitney U",
+             "", "", "Kruskal-Wallis"),
+  header = c(rep("Parametric", 3), rep("Non-Parametric\n(2 groups)", 3),
+             rep("Non-Parametric\n(3+ groups)", 3))
+)
+
+decision_table <- tibble(
+  Scenario = c("One group vs. reference value",
+               "Two groups, same subjects (paired)",
+               "Two independent groups",
+               "Three+ independent groups"),
+  Parametric = c("One-sample t-test", "Paired t-test",
+                 "Independent t-test", "One-way ANOVA"),
+  `Non-Parametric` = c("Wilcoxon signed-rank*", "Wilcoxon signed-rank",
+                        "Mann-Whitney U", "Kruskal-Wallis")
+)
+
+kable(decision_table, format = "html") %>%
+  kable_styling(full_width = TRUE, bootstrap_options = c("bordered", "hover")) %>%
+  row_spec(0, bold = TRUE, background = "#1e3a5f", color = "white") %>%
+  column_spec(1, bold = TRUE) %>%
+  footnote(general = "* One-sample Wilcoxon signed-rank tests median vs. hypothesised value")
+```
+
+## Reporting Template
+
+**t-test:**
+
+> Mean HbA1c was lower in the metformin group (7.1 ± 0.9%) than in the glimepiride group (7.5 ± 1.1%); t(98) = −2.14, p = 0.035, 95% CI for difference [−0.77, −0.03], Cohen's d = 0.40.
+
+. . .
+
+**ANOVA:**
+
+> One-way ANOVA showed a significant difference in Hb across treatment groups, F(2, 87) = 12.4, p < 0.001. Post-hoc Tukey HSD revealed IV iron was significantly higher than placebo (mean diff = 1.9 g/dL, p < 0.001).
+
+. . .
+
+**Non-parametric:**
+
+> Median LOS was significantly shorter in the laparoscopic group (3 days, IQR 2–4) than the open group (6 days, IQR 5–7); Mann-Whitney U, p < 0.001.
+
+## Do's and Don'ts
+
+:::: {.columns}
+::: {.column width="50%"}
+### Do
+
+- Check normality and variance before choosing a test
+- Report effect sizes (Cohen's d, η²)
+- Use Welch's t-test by default for independent samples
+- Apply post-hoc corrections after ANOVA
+- Report medians and IQR for non-parametric tests
+:::
+
+::: {.column width="50%"}
+### Don't
+
+- Run multiple t-tests instead of ANOVA
+- Ignore assumption violations
+- Report only p-values without effect sizes
+- Use parametric tests on ordinal data
+- Forget to state whether the test was one-tailed or two-tailed
+:::
+::::
+
+## Key Takeaways
+
+1. **One-sample t** → one group vs. reference value
+2. **Paired t** → same subjects, two timepoints
+3. **Independent t** → two separate groups
+4. **ANOVA** → three or more groups; follow with post-hoc if significant
+5. **Non-parametric alternatives** for skewed data or ordinal scales
+6. **Always report:** test statistic, df, p-value, CI, and effect size
+7. **Clinical significance** ≠ statistical significance — interpret both

@@ -1,0 +1,270 @@
+---
+title: "Sampling and Study Design"
+subtitle: "From Population to Sample — Choosing the Right Method"
+description: "Understand sampling methods, sample size estimation, and study designs across the spectrum from observational to experimental. Learn why study design determines causality."
+categories: [study-design, sampling, epidemiology, research-methods]
+---
+
+```{r}
+#| label: setup
+#| include: false
+library(tidyverse)
+library(kableExtra)
+library(webexercises)
+library(patchwork)
+library(scales)
+```
+
+## Learning Objectives
+
+1. Compare probability and non-probability sampling methods and discuss their trade-offs
+2. Explain why representative sampling is essential for valid inference
+3. Calculate sample size for common scenarios (estimation, comparison)
+4. Distinguish between cross-sectional, case-control, and cohort study designs
+5. Explain advantages and limitations of observational vs. experimental designs
+6. Interpret the hierarchy of evidence and apply it to published studies
+7. Recognize confounding, selection bias, and measurement bias as they relate to study design
+8. Evaluate whether a study design can support causal inference
+
+---
+
+## Clinical Hook
+
+::: {.clinical-hook}
+**Wine Prevents Heart Disease:** A 10-year cohort study shows that light wine drinkers have 30% lower MI risk than non-drinkers. Headlines proclaim "Wine is Cardioprotective!" But can we conclude causality? What about healthy user bias (non-drinkers are sicker), confounding (wine drinkers have higher SES and better healthcare), and reverse causality (people quit drinking after MI)? This is why study design matters.
+:::
+
+---
+
+## Sampling Methods and Representativeness
+
+::: {.objectives-section}
+Define population (target for inference) and sample (actual subjects studied). Explain probability sampling: simple random, systematic, stratified, and cluster sampling. Discuss non-probability methods: convenience, purposive, snowball. Emphasize that only probability samples allow valid statistical inference; non-probability samples are useful for exploration but generalization is problematic.
+
+**Key Points to Develop:**
+- Sampling frame and frame bias
+- Selection bias: who enrolls vs. who declines?
+- Representative vs. random (they're not the same)
+- Why randomization works even with non-representative sample
+- Spectrum bias: how target population composition affects results
+:::
+
+---
+
+## Sample Size Determination
+
+::: {.objectives-section}
+Introduce the factors that determine sample size: effect size, desired power (usually 80%), significance level (usually α = 0.05), variability in the outcome, and study design. Show formulas for simple scenarios (one-sample, two-sample comparison). Discuss precision (margin of error) for estimation studies. Cover adjustments for dropouts, clustering, and matching.
+
+**Examples to develop:**
+- "How many patients do I need to detect a 10 mmHg difference in blood pressure?"
+- "What sample size gives a 95% CI ± 3 percentage points for disease prevalence?"
+- "I can only recruit 100 patients; what difference can I detect?"
+- Dropout adjustments: recruit 20-30% extra
+:::
+
+---
+
+## Cross-Sectional Studies
+
+::: {.objectives-section}
+Define cross-sectional studies: measure exposure and outcome at one point in time. Discuss strengths: quick, inexpensive, good for prevalence estimation. Limitations: no temporal sequence, cannot establish causality, prevalence is not risk. Explain how cross-sectional studies can be used to generate hypotheses and estimate disease burden.
+
+**Design and analysis points:**
+- Prevalence vs. incidence
+- Odds ratio approximates relative risk only if outcome is rare
+- Snapshot approach: good for surveillance, poor for causality
+- Selection bias in prevalence studies (who's sick and likely captured?)
+:::
+
+---
+
+## Case-Control Studies
+
+::: {.objectives-section}
+Explain case-control design: start with outcome, identify cases and controls, look backward at exposure history. Discuss when case-control is essential (rare outcomes, long latency, expensive exposure measurement). Show how to calculate odds ratios. Discuss control selection (critical!): hospital controls vs. population controls, matched vs. unmatched.
+
+**Advantages and limitations:**
+- Efficient for rare outcomes or long follow-up
+- Prone to recall bias (cases may better remember past exposures)
+- Selection of controls is crucial: source population should be same as that producing cases
+- Matching reduces bias but complicates analysis
+:::
+
+---
+
+## Cohort Studies
+
+::: {.objectives-section}
+Define cohort studies: identify exposure-unexposed groups, follow forward in time, measure outcome incidence. Compare prospective (follow from now) vs. retrospective (use existing data). Calculate risk, relative risk, absolute risk reduction. Discuss advantages: temporal sequence clear, can measure multiple outcomes. Limitations: expense, loss to follow-up, confounding.
+
+**Design variations to cover:**
+- Prospective vs. retrospective cohort
+- Exposed vs. unexposed comparisons
+- Inception cohorts (recruit at disease onset)
+- Fixed vs. dynamic cohorts
+- Competing risks
+:::
+
+---
+
+## Randomized Controlled Trials (RCTs)
+
+::: {.objectives-section}
+Explain why randomization breaks the link between exposure and confounders. Discuss RCT strengths: internal validity, can establish causality, rigorous methodology. Limitations: external validity concerns, cost, ethics (can't randomize some exposures), Hawthorne effect (behavior change when observed). Cover phases of drug development (Phase I-IV).
+
+**Critical appraisal elements:**
+- Allocation concealment (prevents selection bias)
+- Blinding (placebo control, outcome assessor blinding)
+- Intention-to-treat vs. per-protocol analysis
+- Generalizability: does the trial population match my patients?
+:::
+
+---
+
+## Hierarchy of Evidence
+
+::: {.objectives-section}
+Present the evidence pyramid: from case reports and expert opinion at the base to systematic reviews and meta-analyses at the top. Explain that position on the pyramid reflects risk of bias, not absolute importance. Discuss that a poorly designed RCT ranks lower than a well-designed cohort study. Introduce GRADE approach: consider risk of bias, consistency, directness, precision.
+
+**Levels to develop:**
+1. Systematic reviews / meta-analyses
+2. RCTs
+3. Cohort studies
+4. Case-control studies
+5. Cross-sectional / Surveillance
+6. Case reports / Series
+7. Expert opinion
+
+**Exceptions:** rare disease with one case report, mechanistic biology cannot be tested with RCT.
+:::
+
+---
+
+## Comparing Study Designs: A Summary Table
+
+::: {.objectives-section}
+Create a comprehensive table comparing study designs across dimensions: temporal sequence, direction of inquiry (forward vs. backward), internal validity, external validity, cost, time to completion, control of confounding, and best use cases. Include worked examples showing how the same research question would be approached with different designs.
+
+**Dimensions to compare:**
+- Time direction (retrospective → prospective)
+- Establishment of causality potential
+- Cost and feasibility
+- Speed of completion
+- Ability to measure rare outcomes
+- Confounding control
+:::
+
+---
+
+## Selection Bias, Confounding, and Measurement Bias in Study Design
+
+::: {.objectives-section}
+Explain how study design prevents or allows these three sources of bias. Selection bias: when study population differs systematically from target population (e.g., healthy volunteer effect, Berkson's bias in hospital-based case-control). Confounding: third variable related to both exposure and outcome. Measurement bias: systematic error in measuring exposure or outcome. Show how design features (randomization, matching, blinding, standardized instruments) mitigate bias.
+
+**Design-specific vulnerabilities:**
+- Cross-sectional: all biases possible
+- Case-control: recall bias, selection bias of controls
+- Cohort: loss to follow-up, confounding
+- RCT: allocation bias (if not concealed), detection bias (if not blinded)
+:::
+
+---
+
+## Causal Inference and Study Design
+
+::: {.objectives-section}
+Discuss Bradford Hill criteria for causality: strength of association, consistency, temporality, dose-response, plausibility, experiment, analogy, coherence. Explain why only RCTs (or natural experiments) can truly establish causality; observational studies can suggest but not prove causation. Introduce directed acyclic graphs (DAGs) for reasoning about confounding.
+
+**Key concepts to develop:**
+- Temporal sequence: exposure must precede outcome
+- Dose-response relationship
+- Reversibility: can removing exposure reduce outcome?
+- Coherence with mechanistic understanding
+- Why observational studies are prone to confounding
+:::
+
+---
+
+## Practical Study Design Decisions
+
+::: {.objectives-section}
+Guide readers through choosing a study design for their own research: What is my research question? Do I have a defined population? What's my outcome (rare or common)? How much time and money? Can I randomize ethically? What confounders am I concerned about? Provide decision trees and case studies.
+
+**Case studies:**
+- Investigating a new biomarker for sepsis prognosis (observational cohort)
+- Testing a novel surgical technique (safety first, then RCT)
+- Examining long-term effects of childhood exposure (retrospective cohort, natural experiment)
+- Assessing feasibility of an intervention (pilot, non-randomized)
+:::
+
+---
+
+## Further Learning
+
+::: {.resources-box}
+
+**Books:**
+- David Sackett et al., *Evidence-Based Medicine: How to Practice and Teach EBM* (3rd ed.)
+- Margaret Sullivan, *Beginning Biostatistics* (chapters on study design)
+- Sander Greenland et al., *Modern Epidemiology* (3rd ed.)
+
+**Videos:**
+- **Khan Academy** — Observational vs. Experimental Studies
+- **StatQuest with Josh Starmer** — Study Design Basics
+- **Cochrane** — Study Design Series
+
+**Papers:**
+- Vandenbroucke JP, von Elm E, et al. STROBE Statement. *PLoS Med*. 2007. (observational studies)
+- Schulz KF, Altman DG, Moher D. CONSORT Statement. *PLoS Med*. 2010. (RCTs)
+
+**Interactive Resources:**
+- [Cochrane Collaboration](https://www.cochrane.org/) — Study design and quality assessment
+- [GRADE Working Group](https://www.gradeworkinggroup.org/) — Evidence appraisal
+
+:::
+
+---
+
+## NEET PG Practice MCQs
+
+::: {.neet-practice}
+*MCQs to be developed:*
+
+Example question structures:
+- Identifying study design from scenario description
+- Selecting appropriate design for a given research question
+- Calculating sample size given effect size and power
+- Identifying sources of bias in a given design
+- Comparing risk vs. odds in different study types
+- Interpreting hierarchy of evidence
+- Evaluating causality using Bradford Hill criteria
+
+*Answers with detailed explanations to be added.*
+:::
+
+---
+
+## Summary
+
+**Key Takeaways:**
+- Study design determines what conclusions you can draw
+- Randomization breaks confounding; observational studies cannot establish causality
+- Cross-sectional studies measure prevalence; cohort studies measure incidence and risk
+- Case-control studies are efficient for rare outcomes but prone to recall bias
+- RCTs have strongest internal validity but may have limited external validity
+- Sample size depends on effect size, power, and outcome variability
+- The hierarchy of evidence guides interpretation: systematic reviews > RCTs > cohorts > case-control > cross-sectional
+- Consider representativeness, confounding, and measurement error when evaluating any study
+
+**Next Steps:**
+- Choose a recent paper in your field and map its design to the hierarchy of evidence
+- Estimate the sample size needed for a research question of interest
+- Create a simple DAG (directed acyclic graph) for a clinical hypothesis to identify confounders
+
+---
+
+## References
+
+::: {#refs}
+:::

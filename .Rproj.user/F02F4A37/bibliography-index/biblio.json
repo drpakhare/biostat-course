@@ -1,0 +1,887 @@
+{
+    "sources": [
+        {
+            "DOI": "10.1056/NEJM199103213241201",
+            "author": [
+                {
+                    "family": "Echt",
+                    "given": "Debra S"
+                },
+                {
+                    "family": "Liebson",
+                    "given": "Philip R"
+                },
+                {
+                    "family": "Mitchell",
+                    "given": "L Brent"
+                },
+                {
+                    "family": "Peters",
+                    "given": "Robert W"
+                },
+                {
+                    "family": "Obias-Manno",
+                    "given": "Dulce"
+                },
+                {
+                    "family": "Barker",
+                    "given": "Allan H"
+                },
+                {
+                    "family": "Arensberg",
+                    "given": "Daniel"
+                },
+                {
+                    "family": "Baker",
+                    "given": "Andrew"
+                },
+                {
+                    "family": "Friedman",
+                    "given": "Lawrence"
+                },
+                {
+                    "family": "Greene",
+                    "given": "H Leon"
+                },
+                {
+                    "literal": "others"
+                }
+            ],
+            "container-title": "New England Journal of Medicine",
+            "id": "echt1991cast",
+            "issue": "12",
+            "issued": {
+                "date-parts": [
+                    [
+                        1991
+                    ]
+                ]
+            },
+            "page": "781-788",
+            "title": "Mortality and morbidity in patients receiving encainide, flecainide, or placebo: The Cardiac Arrhythmia Suppression Trial",
+            "title-short": "Mortality and morbidity in patients receiving encainide, flecainide, or placebo",
+            "type": "article-journal",
+            "volume": "324"
+        },
+        {
+            "author": [
+                {
+                    "family": "Moore",
+                    "given": "Thomas J"
+                }
+            ],
+            "id": "moore1995deadly",
+            "issued": {
+                "date-parts": [
+                    [
+                        1995
+                    ]
+                ]
+            },
+            "publisher": "Simon & Schuster",
+            "title": "Deadly medicine: Why tens of thousands of heart patients died in America’s worst drug disaster",
+            "title-short": "Deadly medicine",
+            "type": "book"
+        },
+        {
+            "DOI": "10.1001/jama.288.3.321",
+            "author": [
+                {
+                    "family": "Rossouw",
+                    "given": "Jacques E"
+                },
+                {
+                    "family": "Anderson",
+                    "given": "Garnet L"
+                },
+                {
+                    "family": "Prentice",
+                    "given": "Ross L"
+                },
+                {
+                    "family": "LaCroix",
+                    "given": "Andrea Z"
+                },
+                {
+                    "family": "Kooperberg",
+                    "given": "Charles"
+                },
+                {
+                    "family": "Stefanick",
+                    "given": "Marcia L"
+                },
+                {
+                    "family": "Jackson",
+                    "given": "Rebecca D"
+                },
+                {
+                    "family": "Beresford",
+                    "given": "Shirley AA"
+                },
+                {
+                    "family": "Howard",
+                    "given": "Barbara V"
+                },
+                {
+                    "family": "Johnson",
+                    "given": "Karen C"
+                },
+                {
+                    "literal": "others"
+                }
+            ],
+            "container-title": "JAMA",
+            "id": "rossouw2002writing",
+            "issue": "3",
+            "issued": {
+                "date-parts": [
+                    [
+                        2002
+                    ]
+                ]
+            },
+            "page": "321-333",
+            "title": "Risks and benefits of estrogen plus progestin in healthy postmenopausal women: Principal results from the Women’s Health Initiative randomized controlled trial",
+            "title-short": "Risks and benefits of estrogen plus progestin in healthy postmenopausal women",
+            "type": "article-journal",
+            "volume": "288"
+        },
+        {
+            "DOI": "10.1056/NEJMoa2022926",
+            "author": [
+                {
+                    "literal": "RECOVERY Collaborative Group"
+                }
+            ],
+            "container-title": "New England Journal of Medicine",
+            "id": "recovery2020effect",
+            "issue": "21",
+            "issued": {
+                "date-parts": [
+                    [
+                        2020
+                    ]
+                ]
+            },
+            "page": "2030-2040",
+            "title": "Effect of hydroxychloroquine in hospitalized patients with COVID-19",
+            "type": "article-journal",
+            "volume": "383"
+        },
+        {
+            "DOI": "10.1056/NEJMoa2021436",
+            "author": [
+                {
+                    "literal": "RECOVERY Collaborative Group"
+                }
+            ],
+            "container-title": "New England Journal of Medicine",
+            "id": "recovery2021dexamethasone",
+            "issue": "8",
+            "issued": {
+                "date-parts": [
+                    [
+                        2021
+                    ]
+                ]
+            },
+            "page": "693-704",
+            "title": "Dexamethasone in hospitalized patients with COVID-19",
+            "type": "article-journal",
+            "volume": "384"
+        },
+        {
+            "author": [
+                {
+                    "family": "Watson",
+                    "given": "Sophie"
+                },
+                {
+                    "family": "Moody",
+                    "given": "Anthony"
+                }
+            ],
+            "container-title": "Clinical Microbiology Reviews",
+            "id": "watson2006rapid",
+            "issue": "2",
+            "issued": {
+                "date-parts": [
+                    [
+                        2006
+                    ]
+                ]
+            },
+            "page": "283-297",
+            "title": "Rapid diagnostic tests for malaria",
+            "type": "article-journal",
+            "volume": "19"
+        },
+        {
+            "DOI": "10.1002/14651858.CD009593.pub3",
+            "author": [
+                {
+                    "family": "Steingart",
+                    "given": "Karen R"
+                },
+                {
+                    "family": "Schiller",
+                    "given": "Ian"
+                },
+                {
+                    "family": "Horne",
+                    "given": "David J"
+                },
+                {
+                    "family": "Pai",
+                    "given": "Madhukar"
+                },
+                {
+                    "family": "Boehme",
+                    "given": "Catharina C"
+                },
+                {
+                    "family": "Dendukuri",
+                    "given": "Nandini"
+                }
+            ],
+            "container-title": "Cochrane Database of Systematic Reviews",
+            "id": "steingart2014xpert",
+            "issue": "1",
+            "issued": {
+                "date-parts": [
+                    [
+                        2014
+                    ]
+                ]
+            },
+            "title": "Xpert MTB/RIF assay for pulmonary tuberculosis and rifampicin resistance in adults",
+            "type": "article-journal"
+        },
+        {
+            "author": [
+                {
+                    "family": "Sackett",
+                    "given": "David L"
+                },
+                {
+                    "family": "Rennie",
+                    "given": "Drummond"
+                }
+            ],
+            "container-title": "JAMA",
+            "id": "sackett1992rational",
+            "issue": "19",
+            "issued": {
+                "date-parts": [
+                    [
+                        1992
+                    ]
+                ]
+            },
+            "page": "2638-2644",
+            "title": "A primer on the precision and accuracy of the clinical examination",
+            "type": "article-journal",
+            "volume": "267"
+        },
+        {
+            "DOI": "10.1080/00031305.2016.1154108",
+            "author": [
+                {
+                    "family": "Wasserstein",
+                    "given": "Ronald L"
+                },
+                {
+                    "family": "Lazar",
+                    "given": "Nicole A"
+                }
+            ],
+            "container-title": "The American Statistician",
+            "id": "wasserstein2016asa",
+            "issue": "2",
+            "issued": {
+                "date-parts": [
+                    [
+                        2016
+                    ]
+                ]
+            },
+            "page": "129-133",
+            "title": "The ASA statement on p-values: Context, process, and purpose",
+            "title-short": "The ASA statement on p-values",
+            "type": "article-journal",
+            "volume": "70"
+        },
+        {
+            "DOI": "10.1080/00031305.2019.1583913",
+            "author": [
+                {
+                    "family": "Wasserstein",
+                    "given": "Ronald L"
+                },
+                {
+                    "family": "Schirm",
+                    "given": "Allen L"
+                },
+                {
+                    "family": "Lazar",
+                    "given": "Nicole A"
+                }
+            ],
+            "container-title": "The American Statistician",
+            "id": "wasserstein2019moving",
+            "issue": "sup1",
+            "issued": {
+                "date-parts": [
+                    [
+                        2019
+                    ]
+                ]
+            },
+            "page": "1-19",
+            "title": "Moving to a world beyond “p < 0.05”",
+            "type": "article-journal",
+            "volume": "73"
+        },
+        {
+            "author": [
+                {
+                    "family": "Cohen",
+                    "given": "Jacob"
+                }
+            ],
+            "edition": "2nd",
+            "id": "cohen1988statistical",
+            "issued": {
+                "date-parts": [
+                    [
+                        1988
+                    ]
+                ]
+            },
+            "publisher": "Lawrence Erlbaum Associates",
+            "title": "Statistical power analysis for the behavioral sciences",
+            "type": "article-journal"
+        },
+        {
+            "DOI": "10.1371/journal.pmed.0020124",
+            "author": [
+                {
+                    "family": "Ioannidis",
+                    "given": "John PA"
+                }
+            ],
+            "container-title": "PLoS Medicine",
+            "id": "ioannidis2005most",
+            "issue": "8",
+            "issued": {
+                "date-parts": [
+                    [
+                        2005
+                    ]
+                ]
+            },
+            "page": "e124",
+            "title": "Why most published research findings are false",
+            "type": "article-journal",
+            "volume": "2"
+        },
+        {
+            "author": [
+                {
+                    "family": "Pearson",
+                    "given": "Karl"
+                }
+            ],
+            "container-title": "The London, Edinburgh, and Dublin Philosophical Magazine and Journal of Science",
+            "id": "pearson1900chi",
+            "issue": "302",
+            "issued": {
+                "date-parts": [
+                    [
+                        1900
+                    ]
+                ]
+            },
+            "page": "157-175",
+            "title": "On the criterion that a given system of deviations from the probable in the case of a correlated system of variables is such that it can be reasonably supposed to have arisen from random sampling",
+            "type": "article-journal",
+            "volume": "50"
+        },
+        {
+            "author": [
+                {
+                    "family": "Fisher",
+                    "given": "Ronald A"
+                }
+            ],
+            "container-title": "Journal of the Royal Statistical Society",
+            "id": "fisher1922interpretation",
+            "issue": "1",
+            "issued": {
+                "date-parts": [
+                    [
+                        1922
+                    ]
+                ]
+            },
+            "page": "87-94",
+            "title": "On the interpretation of $\\chi^2$ from contingency tables, and the calculation of P",
+            "type": "article-journal",
+            "volume": "85"
+        },
+        {
+            "author": [
+                {
+                    "family": "Tufte",
+                    "given": "Edward R"
+                }
+            ],
+            "edition": "2nd",
+            "id": "tufte2001visual",
+            "issued": {
+                "date-parts": [
+                    [
+                        2001
+                    ]
+                ]
+            },
+            "publisher": "Graphics Press",
+            "title": "The visual display of quantitative information",
+            "type": "book"
+        },
+        {
+            "author": [
+                {
+                    "family": "Wilkinson",
+                    "given": "Leland"
+                }
+            ],
+            "edition": "2nd",
+            "id": "wilkinson2005grammar",
+            "issued": {
+                "date-parts": [
+                    [
+                        2005
+                    ]
+                ]
+            },
+            "publisher": "Springer",
+            "title": "The grammar of graphics",
+            "type": "book"
+        },
+        {
+            "DOI": "10.1198/jcgs.2009.07098",
+            "author": [
+                {
+                    "family": "Wickham",
+                    "given": "Hadley"
+                }
+            ],
+            "container-title": "Journal of Computational and Graphical Statistics",
+            "id": "wickham2010layered",
+            "issue": "1",
+            "issued": {
+                "date-parts": [
+                    [
+                        2010
+                    ]
+                ]
+            },
+            "page": "3-28",
+            "title": "A layered grammar of graphics",
+            "type": "article-journal",
+            "volume": "19"
+        },
+        {
+            "author": [
+                {
+                    "family": "Healy",
+                    "given": "Kieran"
+                }
+            ],
+            "id": "healy2018data",
+            "issued": {
+                "date-parts": [
+                    [
+                        2018
+                    ]
+                ]
+            },
+            "publisher": "Princeton University Press",
+            "title": "Data visualization: A practical introduction",
+            "title-short": "Data visualization",
+            "type": "book"
+        },
+        {
+            "author": [
+                {
+                    "family": "Wilke",
+                    "given": "Claus O"
+                }
+            ],
+            "id": "wilke2019fundamentals",
+            "issued": {
+                "date-parts": [
+                    [
+                        2019
+                    ]
+                ]
+            },
+            "publisher": "O’Reilly Media",
+            "title": "Fundamentals of data visualization",
+            "type": "book"
+        },
+        {
+            "author": [
+                {
+                    "family": "Bland",
+                    "given": "Martin"
+                }
+            ],
+            "edition": "4th",
+            "id": "bland2015introduction",
+            "issued": {
+                "date-parts": [
+                    [
+                        2015
+                    ]
+                ]
+            },
+            "publisher": "Oxford University Press",
+            "title": "An introduction to medical statistics",
+            "type": "book"
+        },
+        {
+            "author": [
+                {
+                    "family": "Kirkwood",
+                    "given": "Betty R"
+                },
+                {
+                    "family": "Sterne",
+                    "given": "Jonathan AC"
+                }
+            ],
+            "edition": "2nd",
+            "id": "kirkwood2003essential",
+            "issued": {
+                "date-parts": [
+                    [
+                        2003
+                    ]
+                ]
+            },
+            "publisher": "Blackwell Science",
+            "title": "Essential medical statistics",
+            "type": "book"
+        },
+        {
+            "author": [
+                {
+                    "family": "Dalgaard",
+                    "given": "Peter"
+                }
+            ],
+            "edition": "2nd",
+            "id": "dalgaard2008introductory",
+            "issued": {
+                "date-parts": [
+                    [
+                        2008
+                    ]
+                ]
+            },
+            "publisher": "Springer",
+            "title": "Introductory statistics with R",
+            "type": "book"
+        },
+        {
+            "author": [
+                {
+                    "family": "Indrayan",
+                    "given": "Abhaya"
+                },
+                {
+                    "family": "Malhotra",
+                    "given": "Rajeev Kumar"
+                }
+            ],
+            "edition": "4th",
+            "id": "indrayan2018medical",
+            "issued": {
+                "date-parts": [
+                    [
+                        2018
+                    ]
+                ]
+            },
+            "publisher": "CRC Press",
+            "title": "Medical biostatistics",
+            "type": "book"
+        },
+        {
+            "author": [
+                {
+                    "family": "Sackett",
+                    "given": "David L"
+                },
+                {
+                    "family": "Haynes",
+                    "given": "R Brian"
+                },
+                {
+                    "family": "Guyatt",
+                    "given": "Gordon H"
+                },
+                {
+                    "family": "Tugwell",
+                    "given": "Peter"
+                }
+            ],
+            "edition": "2nd",
+            "id": "sackett2000clinical",
+            "issued": {
+                "date-parts": [
+                    [
+                        2000
+                    ]
+                ]
+            },
+            "publisher": "Lippincott Williams & Wilkins",
+            "title": "Clinical epidemiology: A basic science for clinical medicine",
+            "title-short": "Clinical epidemiology",
+            "type": "book"
+        },
+        {
+            "author": [
+                {
+                    "family": "Kaplan",
+                    "given": "Edward L"
+                },
+                {
+                    "family": "Meier",
+                    "given": "Paul"
+                }
+            ],
+            "container-title": "Journal of the American Statistical Association",
+            "id": "kaplan1958nonparametric",
+            "issue": "282",
+            "issued": {
+                "date-parts": [
+                    [
+                        1958
+                    ]
+                ]
+            },
+            "page": "457-481",
+            "title": "Nonparametric estimation from incomplete observations",
+            "type": "article-journal",
+            "volume": "53"
+        },
+        {
+            "DOI": "10.1056/NEJMoa1910836",
+            "author": [
+                {
+                    "family": "Larkin",
+                    "given": "James"
+                },
+                {
+                    "family": "Chiarion-Sileni",
+                    "given": "Vanna"
+                },
+                {
+                    "family": "Gonzalez",
+                    "given": "Rutledge"
+                },
+                {
+                    "family": "Grob",
+                    "given": "Jean-Jacques"
+                },
+                {
+                    "family": "Rutkowski",
+                    "given": "Piotr"
+                },
+                {
+                    "family": "Lao",
+                    "given": "Christopher D"
+                },
+                {
+                    "family": "Cowey",
+                    "given": "C Lance"
+                },
+                {
+                    "family": "Schadendorf",
+                    "given": "Dirk"
+                },
+                {
+                    "family": "Wagstaff",
+                    "given": "John"
+                },
+                {
+                    "family": "Dummer",
+                    "given": "Reinhard"
+                },
+                {
+                    "literal": "others"
+                }
+            ],
+            "container-title": "New England Journal of Medicine",
+            "id": "larkin2019combined",
+            "issue": "16",
+            "issued": {
+                "date-parts": [
+                    [
+                        2019
+                    ]
+                ]
+            },
+            "page": "1535-1546",
+            "title": "Five-year survival with combined nivolumab and ipilimumab in advanced melanoma",
+            "type": "article-journal",
+            "volume": "381"
+        },
+        {
+            "DOI": "10.1136/bmj.327.7414.557",
+            "author": [
+                {
+                    "family": "Higgins",
+                    "given": "Julian PT"
+                },
+                {
+                    "family": "Thompson",
+                    "given": "Simon G"
+                },
+                {
+                    "family": "Deeks",
+                    "given": "Jonathan J"
+                },
+                {
+                    "family": "Altman",
+                    "given": "Douglas G"
+                }
+            ],
+            "container-title": "BMJ",
+            "id": "higgins2003measuring",
+            "issue": "7414",
+            "issued": {
+                "date-parts": [
+                    [
+                        2003
+                    ]
+                ]
+            },
+            "page": "557-560",
+            "title": "Measuring inconsistency in meta-analyses",
+            "type": "article-journal",
+            "volume": "327"
+        },
+        {
+            "author": [
+                {
+                    "family": "Greenland",
+                    "given": "Sander"
+                },
+                {
+                    "family": "Robins",
+                    "given": "James M"
+                },
+                {
+                    "family": "Pearl",
+                    "given": "Judea"
+                }
+            ],
+            "container-title": "Annual Review of Public Health",
+            "id": "greenland1999confounding",
+            "issued": {
+                "date-parts": [
+                    [
+                        1999
+                    ]
+                ]
+            },
+            "page": "173-189",
+            "title": "Confounding in health research",
+            "type": "article-journal",
+            "volume": "20"
+        },
+        {
+            "DOI": "10.1136/bmj.c332",
+            "author": [
+                {
+                    "family": "Schulz",
+                    "given": "Kenneth F"
+                },
+                {
+                    "family": "Altman",
+                    "given": "Douglas G"
+                },
+                {
+                    "family": "Moher",
+                    "given": "David"
+                }
+            ],
+            "container-title": "BMJ",
+            "id": "schulz2010consort",
+            "issued": {
+                "date-parts": [
+                    [
+                        2010
+                    ]
+                ]
+            },
+            "page": "c332",
+            "title": "CONSORT 2010 statement: Updated guidelines for reporting parallel group randomised trials",
+            "title-short": "CONSORT 2010 statement",
+            "type": "article-journal",
+            "volume": "340"
+        },
+        {
+            "DOI": "10.1016/S0140-6736(07)61602-X",
+            "author": [
+                {
+                    "dropping-particle": "von",
+                    "family": "Elm",
+                    "given": "Erik"
+                },
+                {
+                    "family": "Altman",
+                    "given": "Douglas G"
+                },
+                {
+                    "family": "Egger",
+                    "given": "Matthias"
+                },
+                {
+                    "family": "Pocock",
+                    "given": "Stuart J"
+                },
+                {
+                    "family": "Gøtzsche",
+                    "given": "Peter C"
+                },
+                {
+                    "family": "Vandenbroucke",
+                    "given": "Jan P"
+                }
+            ],
+            "container-title": "The Lancet",
+            "id": "vonelm2007strobe",
+            "issue": "9596",
+            "issued": {
+                "date-parts": [
+                    [
+                        2007
+                    ]
+                ]
+            },
+            "page": "1453-1457",
+            "title": "The Strengthening the Reporting of Observational Studies in Epidemiology (STROBE) statement: Guidelines for reporting observational studies",
+            "title-short": "The Strengthening the Reporting of Observational Studies in Epidemiology (STROBE) statement",
+            "type": "article-journal",
+            "volume": "370"
+        }
+    ],
+    "project_biblios": [
+        "references.bib"
+    ]
+}

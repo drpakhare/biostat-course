@@ -1,0 +1,76 @@
+---
+title: "How This Book Was Made"
+subtitle: "A Note on Human–AI Collaboration"
+---
+
+## The Short Version
+
+This book was written by two biostatistics teachers (Dr. Abhijit Pakhare and Dr. Ankur Joshi, AIIMS Bhopal) working alongside an AI assistant (Claude, by Anthropic). Every chapter, slide deck, quiz, and plot you see in this course is the product of that collaboration.
+
+We're telling you this upfront because we think you deserve to know — and because the process itself is interesting.
+
+## Why We Did It This Way
+
+Writing an interactive, code-driven textbook is slow. Each module needs narrative text, clinical examples rooted in Indian settings, R code that actually runs, ggplot figures with consistent styling, self-check MCQs with explanations, RevealJS slide decks, and cross-references that all hang together. For two faculty members juggling clinical duties, teaching, and research, doing all of this from scratch would take years.
+
+AI didn't replace the hard parts — deciding *what* to teach, *how* to sequence it, and *which* clinical examples would resonate with Indian medical postgraduates. Those decisions came from years of classroom experience. What AI did was accelerate the mechanical parts: drafting prose, generating R code, formatting Quarto markup, and maintaining consistency across 15 modules.
+
+## What the Process Looks Like
+
+A typical module goes through several rounds:
+
+**Round 1 — Human sets direction.** We decide the learning objectives, choose the clinical scenario (a malaria outbreak in Chhattisgarh, a screening camp at JIPMER, a drug trial at AIIMS Bhopal), and outline the statistical concepts in the order we want students to encounter them.
+
+**Round 2 — AI drafts.** Claude generates a first draft: narrative sections, R code chunks, ggplot figures, MCQ items, and a matching slide deck. Everything follows a set of conventions we established early on — `theme_clean()` for plots, Quarto callouts for key concepts, `make_mcq()` for quiz items, Indian clinical settings throughout.
+
+**Round 3 — Human reviews and redirects.** We read the draft, flag what doesn't work ("the formulae are too algebraic — add conceptual descriptions in words"), request changes ("diversify the locations — not everything should be set in Bhopal"), and catch errors. This is where subject-matter expertise matters most. An AI can produce a plausible-looking explanation of logistic regression, but only a teacher who has watched students struggle with the concept knows *where* they get confused and *which* analogies help.
+
+**Round 4 — AI revises.** Edits are applied, new content is added, consistency is checked across modules. Slide links are inserted into chapters, callout formatting is standardised, cross-references between modules are updated.
+
+**Rounds 5, 6, 7…** The cycle repeats. Some modules went through a dozen iterations.
+
+## What AI Is Good At (and Not Good At)
+
+Things AI handled well:
+
+- Generating syntactically correct R/ggplot code that runs on the first try (mostly)
+- Maintaining formatting conventions across 15 modules and their slide decks
+- Producing first drafts of explanatory text that we could then refine
+- Creating MCQ items with plausible distractors and detailed explanations
+- Keeping track of what changed where — "Module 10 added conceptual formulae, so the Module 10 slides need the same update"
+
+Things AI needed human guidance for:
+
+- Choosing clinically meaningful examples (not just statistically convenient ones)
+- Knowing which concepts students find genuinely confusing vs. which ones seem hard but click quickly
+- Deciding the right level of mathematical detail for clinician-learners
+- Ensuring the Indian clinical settings are authentic, not tokenistic
+- Making pedagogical trade-offs — when to simplify, when to be precise, when to say "this is beyond our scope"
+
+## The Technical Stack
+
+For the curious, here is what powers the book:
+
+- **[Quarto](https://quarto.org)** — the publishing system that turns `.qmd` files into a website, PDF, or ebook
+- **R and ggplot2** — for all data simulations, statistical analyses, and figures
+- **RevealJS** (via Quarto) — for lecture slide decks
+- **GitHub Pages** — for hosting the live site
+- **Claude** (Anthropic) — the AI assistant used during writing
+
+The entire source is available on [GitHub](https://github.com/drpakhare/biostat-course). You can see every file, every commit, and every change.
+
+## A Word on Trust
+
+We want to be clear: AI-generated content can contain errors. We have reviewed every module, but we are also human and may have missed things. If you spot something wrong — a formula that doesn't add up, an R plot that looks odd, an explanation that confuses more than it clarifies — please [open an issue](https://github.com/drpakhare/biostat-course/issues) on GitHub or write to us. You'll be helping future students.
+
+Statistics is a discipline where getting the details right matters. We take that seriously, and we hope this book reflects it.
+
+## Why Tell You All This?
+
+Because transparency builds trust. Because "AI-assisted" doesn't mean "AI-written with no oversight." Because we think the future of educational content involves this kind of collaboration, and pretending otherwise helps no one.
+
+And because, honestly, we think the process is kind of interesting. We hope you do too.
+
+---
+
+*— Abhijit Pakhare & Ankur Joshi, AIIMS Bhopal*

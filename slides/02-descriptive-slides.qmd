@@ -1,0 +1,329 @@
+---
+title: "Describing Data"
+subtitle: "Summary Statistics, Distributions, and Why Pictures Matter"
+format:
+  revealjs:
+    theme: [default, ../styles-slides.css]
+    embed-resources: true
+    slide-number: true
+    show-slide-number: all
+    chalkboard: false
+    footer: "Biostatistics for Clinicians | Module 2"
+    transition: fade
+    incremental: false
+    code-fold: true
+    fig-align: center
+    width: 1280
+    height: 720
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{r}
+#| label: setup
+#| include: false
+library(tidyverse)
+library(kableExtra)
+library(patchwork)
+library(scales)
+set.seed(42)
+```
+
+## Learning Objectives
+
+::: {.incremental}
+1. Calculate and interpret **mean, median, mode**
+2. Recognise when the mean misleads and the median is better
+3. Quantify variability: **range, IQR, SD, CV**
+4. Describe the Normal distribution and the **68-95-99.7 rule**
+5. Identify skewed distributions and choose appropriate summaries
+6. Read and interpret **box plots, violin plots, histograms**
+7. Explain why summary stats alone can deceive (Anscombe's quartet)
+:::
+
+## Clinical Hook: The "Average" Doctor's Salary {.smaller}
+
+::: {.columns}
+::: {.column width="55%"}
+**Group A** (Government college): Everyone earns ~₹1,00,000/month
+
+**Group B** (Private): 8 juniors at ₹80,000, 1 senior at ₹3,00,000, 1 star surgeon at ₹12,00,000
+
+- Group A mean: ₹1,00,000
+- Group B mean: ₹2,10,000
+- Group B **median**: ₹80,000
+
+The mean of ₹2,10,000 represents **nobody** in Group B.
+:::
+
+::: {.column width="45%"}
+```{r}
+#| fig-height: 4.5
+#| fig-width: 5
+
+salary_b <- c(rep(80, 8), 300, 1200)
+tibble(salary = salary_b) %>%
+  ggplot(aes(x = salary)) +
+  geom_histogram(binwidth = 50, fill = "#3498db", colour = "white") +
+  geom_vline(xintercept = mean(salary_b), colour = "#e74c3c", linewidth = 1.2, linetype = "dashed") +
+  geom_vline(xintercept = median(salary_b), colour = "#28a745", linewidth = 1.2, linetype = "dashed") +
+  annotate("text", x = 250, y = 7, label = "Mean", colour = "#e74c3c", fontface = "bold") +
+  annotate("text", x = 120, y = 7, label = "Median", colour = "#28a745", fontface = "bold") +
+  labs(x = "Salary (thousands)", y = "Count", title = "Group B Salaries") +
+  theme_minimal(base_size = 13) + theme(plot.title = element_text(face = "bold"))
+```
+:::
+:::
+
+. . .
+
+> Now replace "salary" with **serum creatinine** in a renal OPD. Same story — a few CKD-5 patients pull the mean far from reality.
+
+## Measures of Central Tendency
+
+| Measure | Formula | Best for | Affected by outliers? |
+|:--------|:--------|:---------|:---------------------|
+| **Mean** | Sum / n | Symmetric data | Yes — heavily |
+| **Median** | Middle value | Skewed data | No — robust |
+| **Mode** | Most frequent | Categorical data | No |
+
+. . .
+
+::: {.callout-tip}
+## Quick Rule
+If **mean ≠ median**, the data is skewed. The direction of the skew is toward the mean.
+
+- Mean > Median → Right-skewed (e.g., income, CRP, LOS)
+- Mean < Median → Left-skewed (rare in clinical data)
+:::
+
+## Worked Example: HbA1c
+
+```{r}
+#| label: fig-hba1c
+#| fig-height: 4.5
+#| fig-width: 10
+
+diabetic <- rnorm(200, mean = 8.5, sd = 1.5)
+non_diabetic <- rnorm(300, mean = 5.4, sd = 0.4)
+
+hba1c_data <- tibble(
+  hba1c = c(diabetic, non_diabetic),
+  group = c(rep("Diabetic (n=200)", 200), rep("Non-Diabetic (n=300)", 300))
+)
+
+ggplot(hba1c_data, aes(x = hba1c, fill = group)) +
+  geom_histogram(binwidth = 0.3, colour = "white", alpha = 0.7, position = "identity") +
+  scale_fill_manual(values = c("#e74c3c", "#3498db")) +
+  geom_vline(xintercept = 6.5, linetype = "dashed", colour = "#2c3e50", linewidth = 0.8) +
+  annotate("text", x = 6.7, y = Inf, vjust = 2, label = "Diagnostic\ncutoff (6.5%)",
+           colour = "#2c3e50", size = 3.5, fontface = "bold") +
+  labs(title = "HbA1c Distribution", x = "HbA1c (%)", y = "Count", fill = NULL) +
+  theme_minimal(base_size = 13) +
+  theme(plot.title = element_text(face = "bold"), legend.position = "bottom")
+```
+
+## Measures of Dispersion
+
+::: {.columns}
+::: {.column width="50%"}
+**For symmetric data:**
+
+- **Range** = Max - Min (sensitive to outliers)
+- **Standard Deviation (SD)** = average distance from mean
+- **Variance** = SD²
+
+$$SD = \sqrt{\frac{\sum(x_i - \bar{x})^2}{n-1}}$$
+:::
+
+::: {.column width="50%"}
+**For skewed data:**
+
+- **IQR** = Q3 - Q1 (middle 50%)
+- **Percentiles** (e.g., 5th, 95th)
+
+**Comparing scales:**
+
+- **CV** = (SD / Mean) × 100%
+- Useful when comparing variability of height (cm) vs weight (kg)
+:::
+:::
+
+## The Normal Distribution: 68-95-99.7 Rule
+
+```{r}
+#| label: fig-normal
+#| fig-height: 4.5
+#| fig-width: 10
+
+x <- seq(-4, 4, length.out = 1000)
+y <- dnorm(x)
+norm_df <- tibble(x = x, y = y)
+
+ggplot(norm_df, aes(x, y)) +
+  geom_area(data = filter(norm_df, x >= -3 & x <= 3), fill = "#d5e8f0", alpha = 0.6) +
+  geom_area(data = filter(norm_df, x >= -2 & x <= 2), fill = "#85c1e9", alpha = 0.6) +
+  geom_area(data = filter(norm_df, x >= -1 & x <= 1), fill = "#3498db", alpha = 0.6) +
+  geom_line(linewidth = 1.2, colour = "#2c3e50") +
+  annotate("text", x = 0, y = 0.15, label = "68%", size = 6, fontface = "bold", colour = "white") +
+  annotate("text", x = 0, y = 0.06, label = "95%", size = 5, fontface = "bold", colour = "#2c3e50") +
+  annotate("text", x = 0, y = 0.01, label = "99.7%", size = 4, colour = "#2c3e50") +
+  scale_x_continuous(breaks = -3:3,
+    labels = c(expression(mu-3*sigma), expression(mu-2*sigma), expression(mu-sigma),
+               expression(mu), expression(mu+sigma), expression(mu+2*sigma), expression(mu+3*sigma))) +
+  labs(title = "The Normal (Gaussian) Distribution", x = NULL, y = "Density") +
+  theme_minimal(base_size = 13) +
+  theme(plot.title = element_text(face = "bold", hjust = 0.5))
+```
+
+## Clinical Application: Serum Sodium
+
+**Population:** Healthy adults, Mean = 140 mEq/L, SD = 3 mEq/L
+
+. . .
+
+::: {.columns}
+::: {.column width="50%"}
+| Rule | Range | % |
+|:-----|:------|:--|
+| Mean ± 1 SD | 137–143 | 68% |
+| **Mean ± 2 SD** | **134–146** | **95%** |
+| Mean ± 3 SD | 131–149 | 99.7% |
+:::
+
+::: {.column width="50%"}
+::: {.callout-important}
+## Reference Range = Mean ± 2 SD
+The "normal range" on your lab report (134–146 mEq/L) is literally mean ± 2 SD. Values outside this range are in the extreme 5% — flagged as abnormal.
+:::
+:::
+:::
+
+## When Data Is NOT Normal: Skewness
+
+```{r}
+#| label: fig-skew
+#| fig-height: 4
+#| fig-width: 10
+
+symmetric <- tibble(value = rnorm(2000, 50, 10), shape = "Symmetric")
+right_skew <- tibble(value = rgamma(2000, shape = 2, rate = 0.1), shape = "Right-Skewed")
+left_skew <- tibble(value = 100 - rgamma(2000, shape = 2, rate = 0.1), shape = "Left-Skewed")
+
+bind_rows(symmetric, right_skew, left_skew) %>%
+  mutate(shape = factor(shape, levels = c("Symmetric", "Right-Skewed", "Left-Skewed"))) %>%
+  ggplot(aes(x = value, fill = shape)) +
+  geom_density(alpha = 0.6, colour = "grey30") +
+  facet_wrap(~shape, scales = "free") +
+  scale_fill_manual(values = c("#3498db", "#e74c3c", "#28a745")) +
+  labs(title = "Distribution Shapes", x = "Value", y = "Density") +
+  theme_minimal(base_size = 12) +
+  theme(plot.title = element_text(face = "bold"), legend.position = "none",
+        strip.text = element_text(face = "bold", size = 12))
+```
+
+> **Right-skewed clinical examples:** Hospital LOS, CRP, income, bilirubin, serum creatinine (mixed populations)
+
+## Box Plot vs Violin Plot: CRP by Sepsis Status
+
+```{r}
+#| label: fig-crp
+#| fig-height: 4.5
+#| fig-width: 10
+
+crp_data <- tibble(
+  group = rep(c("Non-Sepsis", "Sepsis"), c(200, 200)),
+  crp = c(rlnorm(200, meanlog = 1.5, sdlog = 0.8),
+          rlnorm(200, meanlog = 3.5, sdlog = 1.0))
+)
+y_upper <- quantile(crp_data$crp, 0.98)
+
+p_box <- ggplot(crp_data, aes(x = group, y = crp, fill = group)) +
+  geom_boxplot(alpha = 0.7, outlier.shape = 21) +
+  scale_fill_manual(values = c("#3498db", "#e74c3c")) +
+  coord_cartesian(ylim = c(0, y_upper)) +
+  labs(title = "Box Plot", y = "CRP (mg/L)", x = NULL) +
+  theme_minimal(base_size = 12) +
+  theme(plot.title = element_text(face = "bold"), legend.position = "none")
+
+p_violin <- ggplot(crp_data, aes(x = group, y = crp, fill = group)) +
+  geom_violin(alpha = 0.7, colour = "grey30") +
+  geom_boxplot(width = 0.15, fill = "white", alpha = 0.8, outlier.shape = NA) +
+  scale_fill_manual(values = c("#3498db", "#e74c3c")) +
+  coord_cartesian(ylim = c(0, y_upper)) +
+  labs(title = "Violin + Box Plot", y = "CRP (mg/L)", x = NULL) +
+  theme_minimal(base_size = 12) +
+  theme(plot.title = element_text(face = "bold"), legend.position = "none")
+
+p_box + p_violin +
+  plot_annotation(title = "CRP Levels: Sepsis vs Non-Sepsis ICU Patients",
+    theme = theme(plot.title = element_text(face = "bold", size = 15)))
+```
+
+## Anscombe's Quartet: Never Trust Numbers Alone
+
+```{r}
+#| label: fig-anscombe
+#| fig-height: 4.5
+#| fig-width: 10
+
+anscombe_long <- anscombe %>%
+  pivot_longer(everything(),
+    names_to = c(".value", "set"), names_pattern = "(.)(.)"
+  ) %>%
+  mutate(set = paste("Dataset", set))
+
+ggplot(anscombe_long, aes(x = x, y = y)) +
+  geom_point(size = 2.5, colour = "#2c3e50", alpha = 0.7) +
+  geom_smooth(method = "lm", se = FALSE, colour = "#e74c3c", linewidth = 0.8) +
+  facet_wrap(~set, scales = "free") +
+  labs(title = "Anscombe's Quartet: Same Statistics, Different Data",
+       subtitle = "All four: mean(x)=9, mean(y)=7.5, SD(x)=3.3, r=0.82, same regression line",
+       x = "X", y = "Y") +
+  theme_minimal(base_size = 12) +
+  theme(plot.title = element_text(face = "bold"),
+        strip.text = element_text(face = "bold", size = 11))
+```
+
+## Choosing Summary Statistics
+
+| Distribution | Centre | Spread | Report as |
+|:------------|:-------|:-------|:----------|
+| Symmetric / Normal | Mean | SD | Mean ± SD |
+| Skewed | Median | IQR | Median (IQR) |
+| Ordinal | Median | IQR | Median (IQR) |
+| Categorical | Mode | Frequency | n (%) |
+
+. . .
+
+::: {.callout-warning}
+## The #1 Mistake in Medical Papers
+Reporting mean ± SD for skewed data (hospital LOS, CRP, costs). Always check the distribution shape first!
+:::
+
+## Key Takeaways
+
+1. **Mean vs Median**: skewed data → use the **median** (creatinine, CRP, LOS)
+
+2. **SD vs IQR**: SD for symmetric; **IQR** for skewed distributions
+
+3. **68-95-99.7 rule**: the foundation of clinical reference ranges
+
+4. **Always visualise**: Anscombe's quartet proves numbers alone can deceive
+
+5. **Box + violin** = best of both worlds for group comparisons
+
+## Further Learning
+
+**Videos:**
+
+- [StatQuest: Histograms](https://www.youtube.com/watch?v=qBigTkBLU6g)
+- [StatQuest: Mean, Median, Mode](https://www.youtube.com/watch?v=yokWejKEF7Y)
+- [Zedstatistics: Normal Distribution](https://www.youtube.com/watch?v=mtH1fmUVkfE)
+
+**Books:**
+
+- Bland M. *An Introduction to Medical Statistics*. Ch 4–5.
+- Kirkwood BR. *Essential Medical Statistics*. Ch 2–4.

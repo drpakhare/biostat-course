@@ -1,0 +1,1474 @@
+---
+title: "Module 8: Hypothesis Testing — The Logic and the Pitfalls"
+subtitle: "Understanding Statistical Inference, p-values, and Why 'Significant' Doesn't Always Mean 'Important'"
+description: "A comprehensive exploration of hypothesis testing fundamentals for MBBS students, covering the logic of statistical testing, p-values, Type I and II errors, power, and the critical distinction between statistical and clinical significance."
+categories:
+  - Biostatistics
+  - Hypothesis Testing
+  - Statistical Inference
+  - P-values
+  - Effect Size
+author: "AIIMS Bhopal Biostatistics Course"
+date: "`r Sys.Date()`"
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(kableExtra)
+library(webexercises)
+library(patchwork)
+library(scales)
+library(ggtext)
+
+knitr::opts_chunk$set(
+  echo = FALSE,
+  message = FALSE,
+  warning = FALSE,
+  fig.width = 10,
+  fig.height = 6,
+  dpi = 300
+)
+
+# Set theme
+theme_set(theme_minimal() +
+  theme(
+    plot.title = element_text(face = "bold", size = 14),
+    plot.subtitle = element_text(size = 11, color = "gray40"),
+    axis.title = element_text(size = 11),
+    panel.grid.minor = element_blank(),
+    legend.position = "top",
+    legend.justification = "left"
+  ))
+```
+
+## Learning Objectives {#learning-objectives}
+
+By the end of this module, you will be able to:
+
+1. **Explain** the logical foundation of hypothesis testing using the principle of proof by contradiction
+2. **Define and distinguish** between null (H₀) and alternative (H₁) hypotheses
+3. **Interpret** p-values correctly and recognize common misconceptions
+4. **Apply** the ASA Statement on p-values (2016) in critical appraisal of research
+5. **Calculate and compare** Type I error (α), Type II error (β), and statistical power (1-β)
+6. **Compute** effect sizes (Cohen's d) and relate them to clinical minimal important differences
+7. **Distinguish** between statistical significance and clinical significance
+8. **Identify** multiple testing problems and apply appropriate corrections
+9. **Use** confidence intervals as an alternative to p-values for inference
+10. **Critically evaluate** published claims about "significant" findings in Indian medical literature
+
+---
+
+## Clinical Hook {.clinical-hook}
+
+In 2022, a pharmaceutical company announced Phase III trial results for their new antihypertensive agent in The Lancet. With 10,000 patients enrolled across 15 Indian centres, they reported that their drug reduced systolic BP by 2 mmHg more than standard therapy (p = 0.03).
+
+The headlines in Indian medical media screamed: **"Breakthrough antihypertensive shows significant blood pressure reduction!"** Several prestigious hospitals began incorporating this drug into their protocols.
+
+But here's the clinical reality: A 2 mmHg difference is **clinically irrelevant**. The most rigorous meta-analyses suggest the minimal clinically important difference (MCID) for BP reduction is 5-10 mmHg. This drug offers no real therapeutic advantage, yet it was marketed as a "significant" breakthrough.
+
+**What happened?** With such a massive sample size (n = 10,000), even trivial differences achieve statistical significance. The distinction between *statistical significance* (p < 0.05) and *clinical significance* (difference large enough to matter to patients) is one of the **most misunderstood concepts in medicine**—and one of the most tested in NEET PG and board exams.
+
+This module reveals why p-values are often misinterpreted, what they truly mean, and how to think critically about research claims.
+
+---
+
+## Section 1: The Logic of Hypothesis Testing
+
+### Proof by Contradiction (Reductio ad Absurdum)
+
+Hypothesis testing is fundamentally a **logical proof by contradiction**. You've encountered this in mathematics:
+
+To prove a statement is true, assume it's false and show this leads to absurdity.
+
+**Example (Mathematical):**
+To prove √2 is irrational, assume it's rational (= p/q), derive p² = 2q², then show this is impossible.
+
+**Example (Statistical):**
+To test whether a new antiarrhythmic drug works, we assume it *doesn't* (null hypothesis) and ask: "How unlikely is our observed data if this assumption were true?" If our data seem very unlikely under this assumption, we reject the assumption and conclude the drug probably works.
+
+### The Two-Hypothesis Framework
+
+```{r h0-h1-setup}
+# Data for H0 vs H1 visualization
+x <- seq(-4, 5, length.out = 1000)
+h0 <- dnorm(x, mean = 0, sd = 1)
+h1 <- dnorm(x, mean = 2, sd = 1)
+
+# Find critical value (α = 0.05, one-tailed)
+critical_z <- qnorm(0.95)
+
+df_main <- tibble(x = x, h0 = h0, h1 = h1)
+df_type1 <- df_main %>% filter(x >= critical_z)
+df_type2 <- df_main %>% filter(x < critical_z)
+
+p1 <- ggplot(df_main, aes(x = x)) +
+  geom_area(aes(y = h0, fill = "H₀ (Drug has no effect)"), alpha = 0.6) +
+  geom_area(aes(y = h1, fill = "H₁ (Drug has effect)"), alpha = 0.6) +
+  geom_vline(xintercept = critical_z, linetype = "dashed", color = "red", linewidth = 1) +
+  # Shade Type I error region
+  geom_area(
+    data = df_type1,
+    aes(x = x, y = h0, fill = "Type I Error (α)"),
+    alpha = 0.8
+  ) +
+  # Shade Type II error region
+  geom_area(
+    data = df_type2,
+    aes(x = x, y = h1, fill = "Type II Error (β)"),
+    alpha = 0.8
+  ) +
+  scale_fill_manual(
+    values = c(
+      "H₀ (Drug has no effect)" = "#3498db",
+      "H₁ (Drug has effect)" = "#e74c3c",
+      "Type I Error (α)" = "#c0392b",
+      "Type II Error (β)" = "#f39c12"
+    )
+  ) +
+  labs(
+    title = "Hypothesis Testing: Type I and Type II Errors",
+    subtitle = "Two overlapping sampling distributions (α = 0.05, one-tailed test)",
+    x = "Test Statistic (z)",
+    y = "Probability Density",
+    fill = NULL
+  ) +
+  theme(
+    legend.position = "bottom",
+    legend.text = element_text(size = 10)
+  ) +
+  annotate(
+    "text",
+    x = critical_z + 0.5,
+    y = 0.35,
+    label = "Reject H₀\n(α = 0.05)",
+    size = 4,
+    color = "darkred",
+    fontface = "bold"
+  ) +
+  annotate(
+    "text",
+    x = -2,
+    y = 0.35,
+    label = "Fail to Reject H₀\n(Power = 1-β)",
+    size = 4,
+    color = "darkgreen",
+    fontface = "bold"
+  )
+
+p1
+```
+
+**Key Definitions:**
+
+- **H₀ (Null Hypothesis):** The claim of "no effect" or "no difference."
+  Examples:
+  - New drug = standard drug (for BP reduction)
+  - μ = 120 mmHg (population mean)
+  - Treatment effect = 0
+
+- **H₁ (Alternative Hypothesis):** The claim we want to support; that something *is* different.
+  Examples:
+  - New drug ≠ standard drug (two-tailed)
+  - New drug > standard drug (one-tailed, directional)
+  - μ ≠ 120 mmHg (two-tailed)
+
+**Crucial Point:** We never "prove" H₁; we only decide whether H₀ is plausible.
+
+---
+
+## Section 2: One-Tailed vs Two-Tailed Tests
+
+### When Do We Use Each?
+
+**Two-Tailed Test** (Most Common)
+Tests whether there's a difference in *either direction*.
+
+- H₀: μ₁ = μ₂ (Drug effect = placebo effect)
+- H₁: μ₁ ≠ μ₂ (Drug effect ≠ placebo effect)
+- Critical region: Both tails of the distribution
+- At α = 0.05: 0.025 in each tail
+
+**One-Tailed Test** (Less Common; Use with Caution)
+Tests whether an effect exists in a *specific direction*.
+
+- H₀: μ_new drug ≤ μ_standard drug
+- H₁: μ_new drug > μ_standard drug
+- Critical region: Only the right tail
+- At α = 0.05: 0.05 in one tail
+
+```{r one-vs-two-tailed}
+x <- seq(-4, 4, length.out = 1000)
+y <- dnorm(x)
+
+df_tail <- tibble(x = x, y = y)
+df_right_two <- df_tail %>% filter(x > 1.96)
+df_left_two <- df_tail %>% filter(x < -1.96)
+
+p_two <- ggplot(df_tail, aes(x = x, y = y)) +
+  geom_area(fill = "lightblue", alpha = 0.7) +
+  geom_area(
+    data = df_right_two,
+    aes(x = x, y = y),
+    fill = "red",
+    alpha = 0.8
+  ) +
+  geom_area(
+    data = df_left_two,
+    aes(x = x, y = y),
+    fill = "red",
+    alpha = 0.8
+  ) +
+  geom_vline(xintercept = c(-1.96, 1.96), linetype = "dashed", color = "darkred") +
+  labs(
+    title = "Two-Tailed Test (α = 0.05)",
+    subtitle = "0.025 in each tail; critical z = ±1.96",
+    x = "Test Statistic",
+    y = "Density"
+  ) +
+  theme(axis.text.y = element_blank(), axis.ticks.y = element_blank())
+
+df_right_one <- df_tail %>% filter(x > 1.645)
+
+p_one <- ggplot(df_tail, aes(x = x, y = y)) +
+  geom_area(fill = "lightblue", alpha = 0.7) +
+  geom_area(
+    data = df_right_one,
+    aes(x = x, y = y),
+    fill = "red",
+    alpha = 0.8
+  ) +
+  geom_vline(xintercept = 1.645, linetype = "dashed", color = "darkred") +
+  labs(
+    title = "One-Tailed Test (α = 0.05)",
+    subtitle = "0.05 in right tail only; critical z = 1.645",
+    x = "Test Statistic",
+    y = "Density"
+  ) +
+  theme(axis.text.y = element_blank(), axis.ticks.y = element_blank())
+
+p_two / p_one
+```
+
+::::{.key-concept}
+**When Should You Use One-Tailed Tests?**
+
+- **Only if** you have a strong *prior hypothesis* about direction
+- **Only if** you genuinely couldn't care about differences in the opposite direction
+- **Example:** Testing if a safety intervention *reduces* (not increases) medication errors — you only care about one direction
+- **Caution:** One-tailed tests are often used to achieve p < 0.05 more easily. This is a form of **p-hacking** and is unethical
+- **Recommendation:** Pre-specify your test direction in your study protocol before collecting data
+
+Always justify why you're using a one-tailed test in your methods section.
+::::
+
+---
+
+## Section 3: Test Statistic and P-Value
+
+### What Is a Test Statistic?
+
+A **test statistic** is a number computed from your sample data that summarizes the strength of evidence against H₀.
+
+**Common test statistics:**
+
+```{r test-stats-table}
+test_stats <- tibble(
+  Scenario = c(
+    "Comparing one sample mean to a known value",
+    "Comparing two sample means (independent)",
+    "Comparing two sample means (paired)",
+    "Comparing proportions",
+    "Correlation between two variables"
+  ),
+  `Test Statistic` = c(
+    "t = (x̄ - μ₀) / (s / √n)",
+    "t = (x̄₁ - x̄₂) / SE_difference",
+    "t = (x̄_diff - 0) / (s_diff / √n)",
+    "z = (p̂ - p₀) / √[p₀(1-p₀)/n]",
+    "t = r√(n-2) / √(1-r²)"
+  ),
+  `Distribution` = c(
+    "t with (n-1) df",
+    "t with (n₁+n₂-2) df",
+    "t with (n-1) df",
+    "Normal (z)",
+    "t with (n-2) df"
+  )
+)
+
+kable(test_stats, format = "html") %>%
+  kable_styling(full_width = TRUE, font_size = 11) %>%
+  column_spec(1, width = "35%") %>%
+  column_spec(2, width = "35%") %>%
+  column_spec(3, width = "30%")
+```
+
+### What Is a P-Value? (And What It's NOT)
+
+::::{.formula-box}
+**Definition:** The p-value is the probability of observing a test statistic **as extreme or more extreme than** what we actually observed, **assuming H₀ is true**.
+
+Mathematically:
+$$\text{p-value} = P(\text{observed test stat or more extreme} \mid H_0 \text{ is true})$$
+
+Key phrase: **"given H₀ is true"** — this is conditional on H₀, not on your data.
+::::
+
+```{r pvalue-visualization}
+# Generate normal distribution
+x <- seq(-4, 4, length.out = 1000)
+y <- dnorm(x)
+
+# Observed test statistic
+obs_stat <- 2.5
+
+# Create the plot
+df_pval <- tibble(x = x, y = y)
+df_pval_shade <- df_pval %>% filter(abs(x) >= abs(obs_stat))
+
+p_val_plot <- ggplot(df_pval, aes(x = x, y = y)) +
+  geom_area(fill = "lightblue", alpha = 0.7) +
+  # Shade p-value area (two-tailed)
+  geom_area(
+    data = df_pval_shade,
+    aes(x = x, y = y),
+    fill = "#e74c3c",
+    alpha = 0.8
+  ) +
+  # Mark observed statistic
+  geom_vline(xintercept = obs_stat, linetype = "solid", color = "darkred", size = 1.2) +
+  geom_vline(xintercept = -obs_stat, linetype = "solid", color = "darkred", size = 1.2) +
+  annotate(
+    "text",
+    x = obs_stat,
+    y = -0.04,
+    label = paste("Observed\nz =", obs_stat),
+    hjust = 0.5,
+    size = 4,
+    fontface = "bold"
+  ) +
+  annotate(
+    "text",
+    x = 3.3,
+    y = 0.15,
+    label = paste("Red areas = p-value\n≈ 0.012 (two-tailed)\nIf p < 0.05, reject H₀"),
+    hjust = 0,
+    size = 4,
+    color = "darkred",
+    fontface = "bold",
+    bbox = list(
+      boxstyle = "round",
+      fill = "white",
+      color = "darkred",
+      alpha = 0.8
+    )
+  ) +
+  labs(
+    title = "P-Value: Visualized",
+    subtitle = "The red area represents the p-value (probability of observing this extreme a result under H₀)",
+    x = "Test Statistic",
+    y = "Probability Density"
+  ) +
+  theme(axis.text.y = element_blank(), axis.ticks.y = element_blank())
+
+p_val_plot
+```
+
+### Six Common Misconceptions About P-Values
+
+::::{.common-mistake}
+**❌ Misconception 1:** "p = 0.03 means there's a 3% chance the null hypothesis is true"
+
+**✓ Correct:** p = 0.03 means: IF H₀ were true, there would be a 3% chance of observing data this extreme. We don't know the probability that H₀ is true; that depends on prior knowledge (Bayesian thinking).
+::::
+
+::::{.common-mistake}
+**❌ Misconception 2:** "p = 0.03 means the result is 97% likely to be true"
+
+**✓ Correct:** The p-value says nothing about the probability your result is "true." It's a frequentist probability conditional on H₀. The probability your findings replicate depends on effect size, sample size, and study design—not on p-value alone.
+::::
+
+::::{.common-mistake}
+**❌ Misconception 3:** "p = 0.06 means the result is 'marginally significant' and should be reported"
+
+**✓ Correct:** p = 0.06 means we fail to reject H₀ at α = 0.05 threshold. The difference between p = 0.04 and p = 0.06 is arbitrary and not meaningful. Report the actual p-value and effect size; avoid dichotomizing at α = 0.05.
+::::
+
+::::{.common-mistake}
+**❌ Misconception 4:** "A non-significant result (p = 0.15) means the treatment has no effect"
+
+**✓ Correct:** p = 0.15 means we don't have enough evidence to reject H₀. The effect might be real but small, or the sample size too small to detect it (low power). Always examine the effect size and confidence interval.
+::::
+
+::::{.common-mistake}
+**❌ Misconception 5:** "If my p-value is 0.001, I should be very confident in my result"
+
+**✓ Correct:** A very small p-value only means the observed data are unlikely under H₀. It says nothing about whether your study had selection bias, confounding, or measurement error. A biased study with p = 0.001 is still biased.
+::::
+
+::::{.common-mistake}
+**❌ Misconception 6:** "Multiple studies all with p = 0.05 provide strong evidence"
+
+**✓ Correct:** If you run 20 independent studies, you expect ~1 to have p < 0.05 by chance alone (Type I error). This is the **multiple testing problem**—discussed later in this module.
+::::
+
+### The ASA Statement on P-Values (2016)
+
+In 2016, the American Statistical Association released a landmark statement clarifying p-value interpretation. These **6 principles** are heavily tested in NEET PG:
+
+```{r asa-statement}
+asa_principles <- tribble(
+  ~Principle, ~What_It_Means, ~Clinical_Implication,
+  "1. P-values measure incompatibility with H₀",
+  "Small p means data are unusual IF H₀ is true",
+  "Does NOT measure probability H₀ is true",
+
+  "2. P-values do NOT measure effect size",
+  "p = 0.0001 could be a tiny effect; p = 0.10 could be large",
+  "Always report confidence intervals and effect sizes",
+
+  "3. P-values do NOT measure strength of evidence",
+  "Strong evidence comes from effect size, consistency, mechanism",
+  "p-value is just one piece of the puzzle",
+
+  "4. Scientific conclusions require more than p < 0.05",
+  "Binary thinking (significant/not significant) is outdated",
+  "Context: prior evidence, clinical importance, study design",
+
+  "5. P-hacking invalidates reported p-values",
+  "If you test many hypotheses, some p < 0.05 by chance",
+  "Pre-register your analyses to avoid selective reporting",
+
+  "6. P-values from properly designed studies are informative",
+  "When study is well-designed and p-value reported correctly, it contributes to evidence",
+  "But replicate! One study is never sufficient"
+)
+
+kable(asa_principles, format = "html") %>%
+  kable_styling(full_width = TRUE, font_size = 10) %>%
+  column_spec(1, width = "20%") %>%
+  column_spec(2, width = "40%") %>%
+  column_spec(3, width = "40%")
+```
+
+---
+
+## Section 4: Type I Error, Type II Error, and Power
+
+### The Four Possible Outcomes of a Hypothesis Test
+
+```{r errors-table}
+outcomes <- tibble(
+  ` ` = c("H₀ is actually TRUE", "H₀ is actually FALSE"),
+  `We Reject H₀` = c(
+    "TYPE I ERROR (α)\nFalse Positive\nWe incorrectly conclude treatment works",
+    "CORRECT DECISION ✓\nTrue Positive\nWe correctly detect treatment works"
+  ),
+  `We Fail to Reject H₀` = c(
+    "CORRECT DECISION ✓\nTrue Negative\nWe correctly conclude no effect",
+    "TYPE II ERROR (β)\nFalse Negative\nWe miss a real treatment effect"
+  )
+)
+
+kable(outcomes, format = "html", escape = FALSE) %>%
+  kable_styling(full_width = TRUE, font_size = 11) %>%
+  column_spec(1, width = "25%") %>%
+  column_spec(2, width = "37.5%") %>%
+  column_spec(3, width = "37.5%") %>%
+  row_spec(0, background = "#3498db", color = "white", bold = TRUE) %>%
+  row_spec(1, background = "#ecf0f1") %>%
+  row_spec(2, background = "#ecf0f1")
+```
+
+### Definitions and Clinical Examples
+
+**Type I Error (α): False Positive**
+
+- **Definition:** Rejecting H₀ when it's actually true; concluding an effect exists when it doesn't
+- **Probability:** Set by us (usually α = 0.05)
+- **Clinical Example:** A drug is declared effective (rejected H₀) when it actually has no benefit. Patients receive unnecessary treatment and side effects.
+- **In Research:** Increased by: low sample size, p-hacking, multiple testing without correction
+
+**Type II Error (β): False Negative**
+
+- **Definition:** Failing to reject H₀ when it's actually false; missing a real effect
+- **Probability:** β (depends on effect size, sample size, and variability)
+- **Clinical Example:** A truly effective drug is not detected as effective. Patients miss out on beneficial treatment.
+- **In Research:** Increased by: small sample size, low power, large variability
+
+**Power (1 - β): True Positive Rate**
+
+- **Definition:** Probability of correctly rejecting H₀ when it's false; detecting a real effect
+- **Formula:** Power = 1 - β
+- **Gold Standard:** Power ≥ 0.80 (80%) before conducting a study
+- **Clinical Example:** With 80% power, an effective drug has 80% chance of being detected as effective
+
+::::{.key-concept}
+**The Relationship Between α and β:**
+
+- Decreasing α (making the test more stringent) *increases* β
+- You can't simultaneously minimize both errors
+- **Solution:** Increase sample size! More data reduces both α and β
+- **Strategy:** Choose a target power (80% is standard) and calculate required sample size before the study
+::::
+
+### Power Analysis: How to Calculate Sample Size
+
+```{r power-curves}
+# Create power curve showing relationship between effect size and power
+effect_sizes <- seq(0.1, 1.2, by = 0.05)
+power_values <- pnorm(effect_sizes / 2 + qnorm(0.975))  # Approximate for two-tailed test
+
+df_power <- tibble(
+  `Effect Size (Cohen's d)` = effect_sizes,
+  Power = power_values
+)
+
+p1 <- df_power %>%
+  ggplot(aes(x = `Effect Size (Cohen's d)`, y = Power)) +
+  geom_line(size = 1.2, color = "#3498db") +
+  geom_point(size = 2.5, color = "#3498db") +
+  geom_hline(yintercept = 0.80, linetype = "dashed", color = "red", size = 1) +
+  geom_hline(yintercept = 0.90, linetype = "dashed", color = "orange", size = 1) +
+  scale_y_continuous(labels = percent_format(), limits = c(0, 1)) +
+  annotate("text", x = 1, y = 0.82, label = "80% Power", color = "red", fontface = "bold") +
+  annotate("text", x = 1, y = 0.92, label = "90% Power", color = "orange", fontface = "bold") +
+  labs(
+    title = "Power Curve: Effect Size vs Power",
+    subtitle = "For independent t-test with α = 0.05 (two-tailed), n = 64 per group",
+    x = "Cohen's d (Effect Size)",
+    y = "Statistical Power"
+  )
+
+# Power curve showing relationship between sample size and power
+sample_sizes <- seq(10, 200, by = 5)
+# Using approximate formula for two-tailed test
+power_n <- sapply(sample_sizes, function(n) {
+  pnorm(0.5 * sqrt(n / 2) + qnorm(0.975))
+})
+
+df_power_n <- tibble(
+  `Sample Size (per group)` = sample_sizes,
+  Power = pmin(power_n, 1)
+)
+
+p2 <- df_power_n %>%
+  ggplot(aes(x = `Sample Size (per group)`, y = Power)) +
+  geom_line(size = 1.2, color = "#e74c3c") +
+  geom_point(size = 2, color = "#e74c3c", alpha = 0.5) +
+  geom_hline(yintercept = 0.80, linetype = "dashed", color = "darkgreen", size = 1) +
+  scale_y_continuous(labels = percent_format(), limits = c(0, 1)) +
+  annotate("text", x = 150, y = 0.82, label = "80% Power", color = "darkgreen", fontface = "bold") +
+  labs(
+    title = "Power Curve: Sample Size vs Power",
+    subtitle = "For independent t-test with α = 0.05 (two-tailed), Cohen's d = 0.5",
+    x = "Sample Size (per group)",
+    y = "Statistical Power"
+  )
+
+p1 / p2
+```
+
+### Determinants of Statistical Power
+
+```{r power-determinants}
+power_det <- tribble(
+  ~Factor, ~Effect, ~Example,
+  "Sample Size (n)", "↑ n → ↑ Power", "n = 50 gives 70% power; n = 100 gives 85% power",
+  "Effect Size", "↑ Effect → ↑ Power", "Cohen's d = 0.2 (small) requires larger n than d = 0.5 (medium)",
+  "Significance Level (α)", "↓ α → ↓ Power", "α = 0.01 requires larger n than α = 0.05",
+  "Variability (σ)", "↑ σ → ↓ Power", "Noisy data requires larger n",
+  "Test Direction", "One-tailed → ↑ Power", "One-tailed test has ~10% more power than two-tailed (but use carefully!)"
+)
+
+kable(power_det, format = "html") %>%
+  kable_styling(full_width = TRUE, font_size = 11) %>%
+  column_spec(1, width = "20%") %>%
+  column_spec(2, width = "25%") %>%
+  column_spec(3, width = "55%")
+```
+
+::::{.formula-box}
+**Sample Size Calculation Example:**
+
+You're designing a trial to test if a new antiarrhythmic reduces atrial fibrillation recurrence from 40% to 30%.
+
+**Given:**
+- α = 0.05 (two-tailed)
+- β = 0.20 (target power = 80%)
+- p₀ = 0.40 (baseline recurrence)
+- p₁ = 0.30 (target recurrence)
+
+**Using the formula for comparing two proportions:**
+
+$$n = \frac{(z_\alpha + z_\beta)^2 \times p(1-p)}{(p_0 - p_1)^2}$$
+
+where p = (p₀ + p₁)/2 = 0.35
+
+$$n = \frac{(1.96 + 0.84)^2 \times 0.35 \times 0.65}{(0.40 - 0.30)^2} = \frac{7.84 \times 0.228}{0.01} ≈ 179$$
+
+**Result:** You need ~179 patients per group (358 total) to detect this 10% reduction with 80% power.
+
+**Note:** Most statistical software (R, STATA, PASS) automates this calculation. Always run power analysis BEFORE the study.
+::::
+
+---
+
+## Section 5: Statistical Significance vs Clinical Significance
+
+This is the **most clinically important distinction** in biostatistics.
+
+```{r stat-vs-clinical}
+# Create a 2x2 grid showing all combinations
+significance_grid <- tribble(
+  ~Clinically_Important, ~Statistically_Significant, ~Interpretation, ~Color, ~Example,
+  "YES", "YES",
+  "IDEAL: Meaningful finding\nShould influence practice",
+  "#27ae60",
+  "Statin reduces MI by 25% (p=0.001)",
+
+  "YES", "NO",
+  "MISSED FINDING\nReal effect but underpowered study",
+  "#f39c12",
+  "New antihypertensive reduces BP by 8 mmHg (p=0.08, n=60)",
+
+  "NO", "YES",
+  "SPURIOUS FINDING\nStatistical artifact; clinically meaningless",
+  "#e74c3c",
+  "New drug reduces BP by 1.5 mmHg (p=0.04, n=10000)",
+
+  "NO", "NO",
+  "CORRECT NULL\nNo effect to report",
+  "#3498db",
+  "Homeopathy vs placebo (p=0.45)"
+)
+
+# Create visualization
+p_grid <- tribble(
+  ~x, ~y, ~text, ~color, ~title,
+  0.5, 0.75, "IDEAL\nStatistically + Clinically\nSignificant ✓✓", "#27ae60", "YES",
+  0.5, 0.25, "SPURIOUS\nStatistically Significant\nBUT NOT Clinically ✗", "#e74c3c", "YES",
+  0.25, 0.75, "MISSED\nClinically Important\nBUT NOT Statistical ✗", "#f39c12", "NO",
+  0.25, 0.25, "NULL\nNeither Significant ✓", "#3498db", "NO"
+) %>%
+  ggplot(aes(x = x, y = y)) +
+  geom_tile(aes(fill = color), width = 0.45, height = 0.45) +
+  scale_fill_identity() +
+  geom_text(aes(label = text), size = 4.5, fontface = "bold", color = "white") +
+  scale_x_continuous(breaks = c(0.25, 0.5), labels = c("Not\nSignificant", "Significant"), limits = c(0, 1)) +
+  scale_y_continuous(breaks = c(0.25, 0.5), labels = c("Not Important", "Important"), limits = c(0, 1)) +
+  labs(
+    title = "Statistical vs Clinical Significance",
+    x = "Statistical Significance (p-value)",
+    y = "Clinical Importance (Effect Size)",
+    subtitle = "A 2×2 decision framework for interpreting research findings"
+  ) +
+  theme(
+    axis.text = element_text(size = 11, face = "bold"),
+    axis.title = element_text(size = 12, face = "bold"),
+    panel.grid = element_blank(),
+    legend.position = "none"
+  )
+
+p_grid
+```
+
+### Real-World Examples from Indian Medicine
+
+```{r clinical-examples}
+examples <- tribble(
+  ~Study, ~Finding, ~n, ~Effect, ~p_value, ~MCID, ~Verdict,
+
+  "Hypertension Trial\n(10,000 patients)",
+  "New ACE-I reduces SBP by 2 mmHg",
+  10000,
+  "2 mmHg",
+  "0.03",
+  "5-10 mmHg",
+  "Statistical YES\nClinical NO\n❌ Don't prescribe",
+
+  "Sepsis Trial\n(200 patients)",
+  "New antibiotic reduces 28-day mortality by 12%",
+  200,
+  "12%",
+  "0.001",
+  "≥5%",
+  "Statistical YES\nClinical YES\n✓ Implement",
+
+  "Diabetes Trial\n(150 patients)",
+  "New metformin formulation reduces A1c by 0.4%",
+  150,
+  "0.4%",
+  "0.12",
+  "0.5%",
+  "Statistical NO\nClinical borderline\n? Need larger trial",
+
+  "Anticoagulation RCT\n(3,000 patients)",
+  "DOAC reduces stroke by 0.5% vs warfarin",
+  3000,
+  "0.5%",
+  "0.001",
+  "≥2%",
+  "Statistical YES\nClinical NO\n❌ Marginal benefit"
+)
+
+kable(examples, format = "html") %>%
+  kable_styling(full_width = TRUE, font_size = 10) %>%
+  column_spec(1, width = "18%") %>%
+  column_spec(2, width = "22%") %>%
+  column_spec(3, width = "8%") %>%
+  column_spec(4, width = "12%") %>%
+  column_spec(5, width = "10%") %>%
+  column_spec(6, width = "12%") %>%
+  column_spec(7, width = "18%")
+```
+
+::::{.key-concept}
+**Minimal Clinically Important Difference (MCID):**
+
+The MCID is the smallest effect size that patients would consider meaningful.
+
+**Examples (from literature):**
+- BP reduction: 5-10 mmHg systolic
+- HbA1c reduction (diabetes): 0.5%
+- Pain scale (0-100): 10-15 points
+- Functional status (mortality reduction): 5% absolute reduction
+
+**Importance:** Always specify MCID *before* the trial. Use it to interpret p-values and confidence intervals. A statistically significant result that's below the MCID is clinically irrelevant.
+::::
+
+---
+
+## Section 6: Effect Size and Cohen's d
+
+### Why Effect Size Matters More Than P-Values
+
+```{r effect-size-concept}
+# Create three scenarios with different effect sizes but all significant
+set.seed(42)
+
+scenarios <- list(
+  "Small Effect (d ≈ 0.2)",
+  "Medium Effect (d ≈ 0.5)",
+  "Large Effect (d ≈ 0.8)"
+)
+
+effect_sizes_demo <- list(0.2, 0.5, 0.8)
+
+plot_list <- map2(scenarios, effect_sizes_demo, function(title, d) {
+  x <- seq(-4, 4, length.out = 1000)
+  h0 <- dnorm(x, 0, 1)
+  h1 <- dnorm(x, d, 1)
+
+  tibble(x, h0, h1) %>%
+    ggplot(aes(x = x)) +
+    geom_area(aes(y = h0), fill = "#3498db", alpha = 0.6, label = "H₀") +
+    geom_area(aes(y = h1), fill = "#e74c3c", alpha = 0.6, label = "H₁") +
+    geom_vline(xintercept = 1.96, linetype = "dashed", color = "black") +
+    labs(
+      title = title,
+      subtitle = paste("Cohen's d =", d),
+      x = "Standardized Mean Difference",
+      y = "Density"
+    ) +
+    annotate("text", x = -3, y = 0.35, label = "Control\n(H₀)",
+             size = 4, fontface = "bold") +
+    annotate("text", x = d - 0.3, y = 0.35, label = "Treatment\n(H₁)",
+             size = 4, fontface = "bold", color = "darkred") +
+    theme(
+      axis.text.y = element_blank(),
+      axis.ticks.y = element_blank(),
+      legend.position = "none"
+    )
+})
+
+Reduce(`/`, plot_list)
+```
+
+### Cohen's d: Formula and Interpretation
+
+::::{.formula-box}
+**Cohen's d (Standardized Mean Difference):**
+
+$$d = \frac{\overline{x}_1 - \overline{x}_2}{s_p}$$
+
+where $s_p = \sqrt{\frac{(n_1-1)s_1^2 + (n_2-1)s_2^2}{n_1 + n_2 - 2}}$ (pooled standard deviation)
+
+**Interpretation:**
+- **d = 0.2:** Small effect (e.g., 2 mmHg BP reduction)
+- **d = 0.5:** Medium effect (e.g., 8 mmHg BP reduction)
+- **d = 0.8:** Large effect (e.g., 15 mmHg BP reduction)
+- **d = 1.0+:** Very large effect (rare in medicine)
+
+**Advantages over p-values:**
+- Effect size is **independent of sample size**
+- More informative: tells you magnitude of difference
+- Comparable across studies and outcomes
+- Required for meta-analysis
+::::
+
+### Effect Size Classification (Cohen's Guidelines)
+
+```{r cohens-d-table}
+cohen_d <- tribble(
+  ~`Cohen's d`, ~Effect_Size, ~Clinical_Example,
+  "0.0 - 0.2", "Negligible/Small", "New antacid vs old antacid",
+  "0.2 - 0.5", "Small", "Aspirin on mild headache",
+  "0.5 - 0.8", "Medium", "Lisinopril on hypertension",
+  "0.8 - 1.2", "Large", "Penicillin on bacterial infection",
+  "> 1.2", "Very Large", "Insulin in new-onset diabetes"
+)
+
+kable(cohen_d, format = "html") %>%
+  kable_styling(full_width = TRUE, font_size = 12) %>%
+  column_spec(1, width = "20%", background = "#ecf0f1") %>%
+  column_spec(2, width = "25%") %>%
+  column_spec(3, width = "55%")
+```
+
+### Effect Size vs P-Value: A Worked Example
+
+::::{.formula-box}
+**Clinical Scenario:**
+
+Two groups of 50 hypertensive patients each receive either new ACE inhibitor or placebo. After 8 weeks:
+
+- Control (placebo): SBP reduction = 5 ± 10 mmHg
+- Treatment (ACE-I): SBP reduction = 12 ± 10 mmHg
+- Difference: 12 - 5 = 7 mmHg
+
+**Calculate Cohen's d:**
+
+$$s_p = \sqrt{\frac{(50-1)(10)^2 + (50-1)(10)^2}{50 + 50 - 2}} = \sqrt{\frac{9900 + 9900}{98}} = 10$$
+
+$$d = \frac{12 - 5}{10} = 0.7$$
+
+**Interpretation:** Medium effect size (d = 0.7)
+
+**Statistical test (t-test):**
+
+$$t = \frac{7}{10 \times \sqrt{1/50 + 1/50}} = \frac{7}{2} = 3.5$$
+
+$$p < 0.001$$ (highly significant!)
+
+**Clinical Interpretation:**
+- Statistically significant (p < 0.001)? ✓ YES
+- Clinically important? ✓ YES (7 mmHg reduction is substantial for BP)
+- Should we implement? ✓ YES
+- Conclusion: Real finding with clinical utility
+::::
+
+---
+
+## Section 7: The Multiple Testing Problem
+
+### The Core Problem: What Happens When You Test Multiple Hypotheses?
+
+```{r multiple-testing}
+# If you conduct 20 independent tests at α = 0.05,
+# probability of at least one false positive?
+
+num_tests <- seq(1, 50, by = 1)
+prob_atleast_one_false_pos <- 1 - (1 - 0.05)^num_tests
+
+mult_test_df <- tibble(
+  `Number of Tests` = num_tests,
+  `Prob. of ≥1 False Positive` = prob_atleast_one_false_pos
+)
+
+p_mult <- mult_test_df %>%
+  ggplot(aes(x = `Number of Tests`, y = `Prob. of ≥1 False Positive`)) +
+  geom_line(size = 1.2, color = "#e74c3c") +
+  geom_area(alpha = 0.3, fill = "#e74c3c") +
+  geom_vline(xintercept = 20, linetype = "dashed", color = "darkred", alpha = 0.7) +
+  geom_hline(yintercept = 0.05, linetype = "dashed", color = "blue", alpha = 0.7) +
+  geom_hline(yintercept = c(1 - (1 - 0.05)^20), linetype = "dashed", color = "darkred", alpha = 0.7) +
+  scale_y_continuous(labels = percent_format(), limits = c(0, 1)) +
+  annotate("text", x = 20, y = 0.7,
+           label = "At 20 tests:\nP(≥1 false positive) ≈ 64%",
+           fontface = "bold", size = 4,
+           bbox = list(boxstyle = "round", fill = "lightyellow", alpha = 0.8)) +
+  annotate("text", x = 5, y = 0.08,
+           label = "α = 0.05", color = "blue", fontface = "bold", size = 4) +
+  labs(
+    title = "The Multiple Testing Problem",
+    subtitle = "Probability of at least one false positive increases dramatically with number of tests",
+    x = "Number of Independent Statistical Tests",
+    y = "Probability of ≥1 False Positive (Type I Error)"
+  )
+
+p_mult
+```
+
+**The Math:**
+
+If you conduct **k independent tests**, each at α = 0.05, the probability of at least one false positive is:
+
+$$P(\text{≥1 false positive}) = 1 - (1 - \alpha)^k = 1 - (0.95)^k$$
+
+Examples:
+- k = 1: P = 5% ✓
+- k = 5: P = 23% ✗
+- k = 10: P = 40% ✗
+- k = 20: P = 64% ✗
+
+### Bonferroni Correction
+
+The simplest (though conservative) solution: **Adjust the significance threshold**
+
+::::{.formula-box}
+**Bonferroni-Corrected α:**
+
+$$\alpha_{\text{corrected}} = \frac{\alpha}{k}$$
+
+where k = number of tests
+
+**Example:**
+If testing 10 hypotheses, use α = 0.05/10 = 0.005 instead of 0.05
+
+**Interpretation:** Only declare significance if p < 0.005 (more stringent threshold)
+
+**Advantage:** Guarantees family-wise error rate (FWER) is controlled at α
+
+**Disadvantage:** Very conservative; may miss real effects (increases β)
+::::
+
+### Pre-Registration and P-Hacking
+
+::::{.common-mistake}
+**P-Hacking (Researcher Degrees of Freedom):**
+
+This occurs when researchers:
+1. Test many variables/hypotheses post-hoc
+2. Try multiple statistical tests on the same data
+3. Exclude outliers to achieve p < 0.05
+4. Stop data collection when p becomes significant ("peeking")
+5. Report only significant results (file drawer bias)
+
+**Result:** Inflated Type I error; many false positives in literature
+
+**Example:** Researchers analyze 50 blood pressure subgroups (by age, sex, baseline BP, BMI category, etc.). At α = 0.05, expect 2-3 significant by chance. These get published as "breakthrough findings."
+::::
+
+::::{.key-concept}
+**Best Practices to Avoid Multiple Testing Issues:**
+
+1. **Pre-register your analysis plan** (e.g., on ClinicalTrials.gov, OSF Registries)
+2. **Specify primary and secondary outcomes** before analyzing data
+3. **Report all tests**, not just significant ones
+4. **Correct for multiple comparisons** (Bonferroni, FDR, etc.) if conducting multiple tests
+5. **Distinguish exploratory from confirmatory** research
+6. **Replicate findings** in independent datasets
+7. **Use appropriate caution** with post-hoc analyses—label them clearly as exploratory
+
+Indian journals (like IJMR, JAPI) increasingly require pre-registration for clinical trials.
+::::
+
+---
+
+## Section 8: Confidence Intervals as an Alternative to P-Values
+
+### Why Confidence Intervals?
+
+A **confidence interval (CI)** provides more information than a p-value alone:
+
+1. **Estimates the range** of plausible values for the effect
+2. **Shows uncertainty** around the estimate
+3. **Can replace** p-value for hypothesis testing
+4. **Incorporates effect size** directly
+5. **Less subject** to p-value misconceptions
+
+### Definition and Interpretation
+
+::::{.formula-box}
+**95% Confidence Interval:**
+
+"If we repeated the study 100 times with different samples, the true parameter would fall within the calculated CI in approximately 95 of those studies."
+
+**NOT correct interpretation:** "There's a 95% probability the parameter is in this interval" (probability is either 0 or 1—the parameter either is or isn't in the interval)
+
+**Correct analogy:** Like casting a fishing net. You use the same method 100 times on different days. 95% of days, your net catches the fish.
+
+**Example:**
+- Observed BP reduction: 8 mmHg
+- 95% CI: (4 to 12) mmHg
+- Interpretation: With 95% confidence, the true effect is between 4 and 12 mmHg
+::::
+
+### Using CI for Hypothesis Testing
+
+**CI Method (Replaces p-value):**
+
+- If the 95% CI **excludes zero** → p < 0.05 (reject H₀)
+- If the 95% CI **includes zero** → p ≥ 0.05 (fail to reject H₀)
+
+**Example 1:** New drug vs placebo
+- Observed difference in BP reduction: 5 mmHg
+- 95% CI: (2 to 8) mmHg
+- Conclusion: CI excludes zero → Statistically significant (p < 0.05) ✓
+
+**Example 2:** New drug vs placebo
+- Observed difference in BP reduction: 2 mmHg
+- 95% CI: (-1 to 5) mmHg
+- Conclusion: CI includes zero → NOT statistically significant (p ≥ 0.05) ✗
+
+```{r ci-visualization}
+# Create visualization of CI for multiple studies
+studies <- tibble(
+  Study = c("Study A", "Study B", "Study C", "Study D", "Study E"),
+  Effect = c(5, 8, -2, 12, 3),
+  CI_Lower = c(2, 5, -6, 8, 0),
+  CI_Upper = c(8, 11, 2, 16, 6),
+  Significant = c("Yes", "Yes", "No", "Yes", "No")
+)
+
+p_ci <- studies %>%
+  mutate(Study = fct_reorder(Study, Effect)) %>%
+  ggplot(aes(x = Study, y = Effect)) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red", size = 1) +
+  geom_point(aes(color = Significant), size = 3) +
+  geom_errorbar(aes(ymin = CI_Lower, ymax = CI_Upper, color = Significant),
+                width = 0.2, size = 1.2) +
+  scale_color_manual(
+    values = c("Yes" = "#27ae60", "No" = "#e74c3c"),
+    labels = c("Yes" = "CI excludes 0", "No" = "CI includes 0")
+  ) +
+  coord_flip() +
+  labs(
+    title = "Confidence Intervals for Five Hypothetical Studies",
+    subtitle = "Green CIs exclude zero (significant); Red CIs include zero (not significant)",
+    x = "Study",
+    y = "Effect Size (e.g., BP reduction in mmHg)",
+    color = "Statistically\nSignificant?"
+  ) +
+  theme(legend.position = "right")
+
+p_ci
+```
+
+::::{.key-concept}
+**Why Confidence Intervals Are Better Than P-Values:**
+
+| Aspect | P-Value | Confidence Interval |
+|--------|---------|-------------------|
+| Shows effect size? | No | YES ✓ |
+| Shows uncertainty? | Implicit only | YES ✓ |
+| Avoids dichotomous thinking? | No | YES ✓ |
+| Interpretable intuitively? | No (commonly misunderstood) | YES ✓ |
+| Can exclude clinically unimportant differences? | No | YES ✓ |
+| Subject to p-hacking? | YES ✗ | Less so |
+
+**Recommendation:** Report both p-values AND confidence intervals. The CI is the more informative summary.
+::::
+
+---
+
+## Section 9: Test Statistics Formulae Reference
+
+### One-Sample t-Test
+
+**Scenario:** Testing if a sample mean differs from a known population value
+
+$$t = \frac{\overline{x} - \mu_0}{s / \sqrt{n}}$$
+
+where:
+- $\overline{x}$ = sample mean
+- $\mu_0$ = hypothesized population mean
+- s = sample standard deviation
+- n = sample size
+- **df** = n - 1
+
+**Clinical Example:** Hemoglobin in 50 COPD patients has mean 13.2 g/dL (SD = 1.5). Is this different from normal (μ₀ = 14.5)?
+
+### Two-Sample t-Test (Independent)
+
+**Scenario:** Comparing means between two independent groups
+
+$$t = \frac{\overline{x}_1 - \overline{x}_2}{\sqrt{s_p^2(1/n_1 + 1/n_2)}}$$
+
+where:
+- $s_p = \sqrt{\frac{(n_1-1)s_1^2 + (n_2-1)s_2^2}{n_1 + n_2 - 2}}$ (pooled SD)
+- **df** = n₁ + n₂ - 2
+
+**Clinical Example:** Systolic BP in treatment (n=30, mean=135 mmHg) vs control (n=30, mean=150 mmHg)
+
+### One-Sample z-Test for Proportions
+
+**Scenario:** Testing if a sample proportion differs from a known value
+
+$$z = \frac{\hat{p} - p_0}{\sqrt{\frac{p_0(1-p_0)}{n}}}$$
+
+where:
+- $\hat{p}$ = observed proportion
+- p₀ = hypothesized proportion
+- n = sample size
+
+**Clinical Example:** In 200 patients on statin, 158 achieved LDL < 100 mg/dL (observed = 0.79). Expected = 0.85?
+
+### Cohen's d
+
+$$d = \frac{\overline{x}_1 - \overline{x}_2}{s_p}$$
+
+or for comparison to zero:
+
+$$d = \frac{\overline{x} - \mu_0}{s}$$
+
+---
+
+## Section 10: Summary and Key Takeaways
+
+### The "Big Picture" of Hypothesis Testing
+
+```{r summary-flowchart, fig.height=8}
+# Create a flowchart-style summary
+summary_text <- "
+HYPOTHESIS TESTING WORKFLOW
+
+1. STATE HYPOTHESES
+   ├─ H₀ (Null): No effect
+   └─ H₁ (Alternative): Effect exists
+
+2. CHOOSE SIGNIFICANCE LEVEL
+   ├─ α = 0.05 (arbitrary but standard)
+   └─ Consider: Two-tailed vs one-tailed
+
+3. CALCULATE TEST STATISTIC
+   ├─ t-test, z-test, χ², F, etc.
+   └─ Depends on data type & design
+
+4. COMPUTE P-VALUE
+   ├─ Probability of this extreme result IF H₀ is true
+   └─ NOT probability that H₀ is true
+
+5. DECISION
+   ├─ p < 0.05: Reject H₀ (statistically significant)
+   └─ p ≥ 0.05: Fail to reject H₀ (not significant)
+
+6. REPORT WITH CONTEXT
+   ├─ p-value AND confidence interval
+   ├─ Effect size (Cohen's d)
+   └─ Interpret: Clinically important?
+
+7. CONSIDER ALTERNATIVE MECHANISMS
+   ├─ Confounding?
+   ├─ Bias?
+   ├─ Sample size adequate?
+   └─ Multiple testing issues?
+"
+
+plot_df <- tibble(
+  x = 0.5,
+  y = 0.5,
+  text = summary_text
+)
+
+ggplot(plot_df, aes(x = x, y = y)) +
+  geom_text(aes(label = text),
+            family = "monospace",
+            size = 3.8,
+            hjust = 0.5, vjust = 0.5,
+            lineheight = 1.3) +
+  xlim(0, 1) +
+  ylim(0, 1) +
+  theme_void() +
+  theme(
+    plot.background = element_rect(fill = "#ecf0f1", color = "#34495e", size = 2)
+  )
+```
+
+### Critical Do's and Don'ts
+
+::::{.key-concept}
+**DO:**
+- ✓ Pre-specify your hypotheses and test direction
+- ✓ Report confidence intervals alongside p-values
+- ✓ Report effect sizes (Cohen's d, OR, RR)
+- ✓ Conduct power analysis BEFORE the study
+- ✓ Correct for multiple comparisons if needed
+- ✓ Report ALL tests conducted, not just significant ones
+- ✓ Consider clinical vs statistical significance
+- ✓ Replicate findings; one study is never enough
+- ✓ Discuss limitations and alternative explanations
+
+**DON'T:**
+- ✗ Interpret p-value as probability H₀ is true
+- ✗ Claim a non-significant result "proves" no effect
+- ✗ Use one-tailed tests to dodge the 0.05 threshold
+- ✗ Stop data collection when p < 0.05 ("peeking")
+- ✗ Test multiple hypotheses without correction
+- ✗ Report "marginally significant" (p = 0.06) as meaningful
+- ✗ Confuse statistical and clinical significance
+- ✗ Rely solely on p-values without examining effect sizes
+- ✗ Expect one study to "prove" causation
+- ✗ Ignore confounding, bias, and study design limitations
+::::
+
+---
+
+## Resources {.resources-box}
+
+### Video Resources
+
+**StatQuest with Josh Starmer (YouTube):**
+- [P-values](https://www.youtube.com/watch?v=vemZtEM63GY)
+- [Hypothesis Testing](https://www.youtube.com/watch?v=tTeMYDAv5jU)
+- [Statistical Power](https://www.youtube.com/watch?v=Rsc5znwuItw)
+- [Effect Size](https://www.youtube.com/watch?v=P-wFoq4hWks)
+
+**Zed Statistics (YouTube):**
+- [P-Value Clearly Explained](https://www.youtube.com/watch?v=9jW9G6gkn1Q)
+
+### Recommended Books
+
+1. **Bland M (2015).** *An Introduction to Medical Statistics (4th ed).* Oxford University Press.
+   - Chapter 9-10: Hypothesis Testing, Power, Samples Sizes
+
+2. **Kirkwood BR, Sterne JAC (2003).** *Essential Medical Statistics (2nd ed).* Blackwell Science.
+   - Chapter 7-8: Hypothesis Testing, Confidence Intervals
+
+3. **Altman DG (1991).** *Practical Statistics for Medical Research.* Chapman & Hall.
+   - Chapter 9: Comparing Groups
+
+### Online References
+
+- **ASA Statement on p-values (2016):** [https://doi.org/10.1080/00031305.2016.1154108](https://doi.org/10.1080/00031305.2016.1154108)
+  Essential reading for understanding p-value misconceptions
+
+- **Nature Editorial (2019):** "Retire Statistical Significance"
+  [https://doi.org/10.1038/d41586-019-00857-9](https://doi.org/10.1038/d41586-019-00857-9)
+
+---
+
+## Practice Questions: NEET PG Style MCQs {.neet-practice}
+
+### Q1: Interpreting P-Values
+
+A clinical trial comparing a new antidiabetic agent to metformin reports p = 0.03 for the primary outcome (HbA1c reduction). Which of the following statements is the CORRECT interpretation?
+
+```{r q1-mcq, results='asis'}
+cat(mcq(c(
+  "There is a 97% probability that the new drug is truly better than metformin",
+  answer = "If metformin and the new drug are equally effective, there is a 3% chance of observing data this extreme due to random variation",
+  "The new drug is 97% likely to reduce HbA1c in the entire population",
+  "The null hypothesis is false with 97% certainty"
+)))
+```
+
+::: {.webex-solution}
+**Correct Answer: B**
+
+This is the precise definition of a p-value. It's the probability of observing results AS EXTREME or MORE EXTREME than what we observed, assuming the null hypothesis is true (drugs are equally effective).
+
+Common misconceptions:
+- Option A: Backwards! p-value doesn't tell us P(H₀ is false)
+- Option C: Confuses sample with population
+- Option D: p-value is NOT a probability that H₀ is true/false; it's conditional on H₀ being true
+
+**Key Concept:** The p-value is about the DATA given H₀, not about H₀ given the data.
+:::
+
+---
+
+### Q2: Type I and Type II Errors
+
+You are designing a trial to test if a new heart failure drug reduces mortality. You decide on α = 0.05 and β = 0.20. Which statement accurately describes your study design?
+
+```{r q2-mcq, results='asis'}
+cat(mcq(c(
+  "The study has 5% power to detect a real treatment effect",
+  answer = "The study has 80% power to detect a real treatment effect if one exists",
+  "The study will find statistical significance 20% of the time",
+  "There is a 5% chance the drug actually works but we won't detect it"
+)))
+```
+
+::: {.webex-solution}
+**Correct Answer: B**
+
+Power = 1 - β = 1 - 0.20 = 0.80 (80%)
+
+This means:
+- If the drug truly works, we have an 80% probability of detecting it (p < 0.05)
+- If the drug truly works but we don't detect it, β (Type II error) = 20%
+- α = 0.05 is the probability of false positive (Type I error)
+
+Breakdown of incorrect options:
+- Option A: Confuses α with power
+- Option C: Misinterprets β
+- Option D: Describes β incorrectly (β is about missing a real effect we're not sure exists yet)
+
+**Remember:** Power is about detecting a real effect. Higher power = better study.
+:::
+
+---
+
+### Q3: Statistical vs Clinical Significance
+
+A large randomized controlled trial (n = 5000) comparing two antihypertensive agents reports: "New drug reduced systolic BP by 1.5 mmHg more than standard therapy (95% CI: 0.8 to 2.2 mmHg, p = 0.001)." What is the most appropriate clinical interpretation?
+
+```{r q3-mcq, results='asis'}
+cat(mcq(c(
+  "The new drug is significantly better and should replace the standard drug in clinical practice",
+  "The result is statistically significant but likely not clinically meaningful given that the minimal clinically important difference for BP is 5 mmHg",
+  answer = "The result is statistically significant but likely not clinically meaningful given that the minimal clinically important difference for BP is 5 mmHg",
+  "A 1.5 mmHg difference is too small to be detected in any study"
+)))
+```
+
+::: {.webex-solution}
+**Correct Answer: B and C (same correct answer)**
+
+This exemplifies the distinction between statistical and clinical significance:
+
+**Statistical:** YES
+- p = 0.001 is highly statistically significant
+- 95% CI (0.8 to 2.2) excludes zero
+- Large sample size (n=5000) increases precision
+
+**Clinical:** NO
+- MCID for BP reduction = 5-10 mmHg (based on clinical trial outcomes showing mortality/morbidity benefit)
+- Observed effect = 1.5 mmHg (well below MCID)
+- Difference is clinically irrelevant for patient outcomes
+
+**Why this happens:**
+With large samples (n=5000), even tiny differences become statistically significant. The study shows excellent precision (narrow CI), but the effect itself is too small to matter clinically.
+
+**Clinical decision:** Do NOT change practice based on this finding.
+:::
+
+---
+
+### Q4: Multiple Testing and P-Hacking
+
+A researcher analyzes 30 different blood pressure subgroups (age, sex, BMI categories, etc.) looking for which subgroups benefit most from a new antihypertensive. They report 3 subgroups with p < 0.05. What is the most appropriate interpretation?
+
+```{r q4-mcq, results='asis'}
+cat(mcq(c(
+  "The three subgroups truly respond differently to the drug, confirming personalized medicine",
+  answer = "With 30 tests at α = 0.05, we expect ~1.5 false positives by chance; the three 'significant' findings may be spurious and require independent replication",
+  "The Bonferroni-corrected p-value threshold would be 0.05/3 = 0.017",
+  "This is a significant finding that justifies clinical practice change in these subgroups"
+)))
+```
+
+::: {.webex-solution}
+**Correct Answer: B**
+
+**The Multiple Testing Problem:**
+- With k = 30 independent tests at α = 0.05
+- Expected number of false positives = 30 × 0.05 = 1.5
+- Probability of ≥1 false positive = 1 - (0.95)³⁰ ≈ 78%
+
+Finding 3 "significant" results in 30 tests is **expected by chance alone**—not evidence of true effects.
+
+**Correct approach:**
+1. **Bonferroni correction:** α = 0.05/30 = 0.0017 (much stricter)
+   - Only results with p < 0.0017 would be declared significant
+   - With this correction, likely NONE of the 3 results remain significant
+2. **Best practice:** Label subgroup analysis as **exploratory**, not confirmatory
+3. **Replication:** Test findings in independent sample before changing practice
+
+**Why Option C is wrong:**
+- Bonferroni correction = 0.05/30 = 0.0017 (not 0.05/3)
+- You correct for ALL tests performed, not just significant ones
+
+This scenario reflects the research scandal: p-hacking, HARKing (Hypothesizing After Results are Known), and selective reporting inflate false positives in published literature.
+:::
+
+---
+
+### Q5: Effect Size and Power Calculation
+
+You are designing a trial to test if a new anticoagulant reduces warfarin-related bleeding by absolute 5% (from 15% to 10%). You want 80% power at α = 0.05 (two-tailed). How should this study be powered?
+
+```{r q5-mcq, results='asis'}
+cat(mcq(c(
+  "The study requires very small sample size (~50 per group) because the effect size is moderate",
+  answer = "The study requires moderate sample size (~200-250 per group) because proportions require larger n than continuous outcomes",
+  "Effect size is irrelevant; any n ≥ 30 is sufficient",
+  "The study requires very large sample size (>1000 per group) because p₁ = 10% is a very small proportion"
+)))
+```
+
+::: {.webex-solution}
+**Correct Answer: B**
+
+**Why this is tricky:**
+Comparing proportions requires **larger sample sizes** than comparing continuous outcomes (like BP).
+
+**Rough calculation (two-sample proportion test):**
+- p₀ = 0.15 (baseline bleeding risk)
+- p₁ = 0.10 (target bleeding risk)
+- Absolute difference = 5%
+- Power = 80%, α = 0.05 (two-tailed)
+
+Using standard formulas or software:
+- Required n ≈ 200-250 per group (400-500 total)
+
+**Why not the other options?**
+- Option A: Overestimates power (n too small)
+- Option C: Completely wrong; n=30 rule applies only to continuous outcomes with Central Limit Theorem
+- Option D: Overestimates requirements; 10% is not extremely rare (we have good power)
+
+**Key Learning:**
+Binary outcomes require larger sample sizes than continuous outcomes for the same effect size. This is why large trials comparing proportions (mortality, adverse events) often enroll thousands.
+:::
+
+---
+
+## Final Exam-Oriented Summary
+
+### Most Commonly Tested Concepts (NEET PG, Board Exams)
+
+1. **P-value Interpretation** (Most tested!)
+   - Definition: Conditional probability given H₀
+   - NOT: Probability that H₀ is false
+   - NOT: Probability that result is "true"
+
+2. **Type I (α) vs Type II (β) Error**
+   - α = False positive = Reject H₀ when true
+   - β = False negative = Fail to reject H₀ when false
+   - Power = 1 - β
+
+3. **Statistical vs Clinical Significance**
+   - p < 0.05 ≠ Clinically important
+   - Large samples find small, irrelevant differences
+   - Always consider effect size and MCID
+
+4. **One-Tailed vs Two-Tailed Tests**
+   - Two-tailed: Default (unless strong prior reason)
+   - One-tailed: More power but risky for "p-hacking"
+
+5. **Effect Size (Cohen's d)**
+   - d = 0.2 (small), d = 0.5 (medium), d = 0.8 (large)
+   - Independent of sample size
+   - Required for meta-analysis
+
+6. **Multiple Testing**
+   - Testing k hypotheses → expect k × α false positives
+   - Use Bonferroni correction or pre-register
+   - Subgroup analysis is exploratory unless pre-specified
+
+7. **Confidence Intervals**
+   - Better than p-values for showing effect size and uncertainty
+   - CI excludes zero ↔ p < 0.05 (two-tailed)
+
+---
+
+## References {#refs}
+
+Altman DG. (1991). *Practical Statistics for Medical Research*. Chapman & Hall.
+
+Bland M. (2015). *An Introduction to Medical Statistics* (4th ed). Oxford University Press.
+
+Goodman S. (2008). A Dirty Dozen: Twelve P-Value Misconceptions. *Seminars in Hematology*, 45(3), 135–140.
+
+Kirkwood BR, Sterne JAC. (2003). *Essential Medical Statistics* (2nd ed). Blackwell Science.
+
+Wasserstein RL, Lazar NA. (2016). The ASA's Statement on P-Values: Context, Process, and Purpose. *The American Statistician*, 70(2), 129–133. https://doi.org/10.1080/00031305.2016.1154108
+
+---
+
+**Last Updated:** `r Sys.Date()`
+**Module Author:** AIIMS Bhopal Biostatistics Course Development Team
+**Feedback & Corrections:** biostat@aiims.edu.in

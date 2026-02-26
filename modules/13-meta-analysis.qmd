@@ -1,0 +1,328 @@
+---
+title: "Meta-analysis and Evidence Synthesis"
+subtitle: "Combining Evidence from Multiple Studies"
+description: "Learn to synthesize evidence across studies using meta-analysis. Understand forest plots, fixed vs. random effects, heterogeneity measures, funnel plots, and publication bias."
+categories: [meta-analysis, systematic-review, heterogeneity, evidence-synthesis]
+---
+
+```{r}
+#| label: setup
+#| include: false
+library(tidyverse)
+library(kableExtra)
+library(webexercises)
+library(patchwork)
+library(scales)
+```
+
+## Learning Objectives
+
+1. Understand the purpose and process of systematic review and meta-analysis
+2. Interpret forest plots from meta-analyses
+3. Distinguish between fixed and random effects models
+4. Calculate and interpret heterogeneity (I² statistic)
+5. Assess publication bias using funnel plots and statistical tests
+6. Understand when combining studies is and is not appropriate
+7. Recognize sources of bias in meta-analyses
+8. Critique meta-analyses using PRISMA checklist
+
+---
+
+## Clinical Hook
+
+::: {.clinical-hook}
+**Two RCTs, Opposite Results:** Study A (n = 200) shows drug X reduces mortality (HR = 0.75, 95% CI 0.55-0.98). Study B (n = 150) shows increased mortality (HR = 1.22, 95% CI 0.88-1.69). Both published. Should we prescribe X? Meta-analysis combines them: pooled HR = 0.92 (CI 0.73-1.15). This is why systematic review matters: conflicting signals require careful integration.
+:::
+
+---
+
+## Systematic Review and Meta-Analysis Basics
+
+::: {.objectives-section}
+Distinguish: systematic review = structured approach to finding, appraising, and synthesizing evidence (qualitative); meta-analysis = statistical method combining results (quantitative). Systematic review can exist without meta-analysis. Meta-analysis without systematic review is not credible. Explain hierarchy: meta-analysis of RCTs > meta-analysis of cohorts > individual studies.
+
+**Components of a systematic review:**
+- Defined research question (PICO: population, intervention, comparator, outcome)
+- Pre-registered protocol
+- Comprehensive literature search
+- Eligibility criteria (inclusion/exclusion)
+- Bias risk assessment (each study)
+- Data extraction
+- Synthesis (qualitative or quantitative)
+- Assessment of overall evidence quality (GRADE)
+:::
+
+---
+
+## Forest Plots: Reading and Interpreting
+
+::: {.objectives-section}
+Forest plots visualize effect sizes and CIs from individual studies and pooled estimate. Horizontal lines = 95% CIs for each study; diamond = summary estimate; x-axis often log scale with 1.0 (null) marked. Interpret: does CI exclude null? How wide is CI? Does it represent small/large effect? How much variation across studies?
+
+**Elements of a forest plot:**
+- Study names/author-years on left
+- Point estimate (square) and CI (horizontal line) for each study
+- Horizontal position: effect size relative to 1.0
+- Square size: weight of study (larger sample = larger square)
+- Diamond: pooled estimate with CI
+- Vertical line at 1.0 (null effect for ratios)
+:::
+
+---
+
+## Fixed Effects Model
+
+::: {.objectives-section}
+Fixed effects meta-analysis assumes all studies estimate the same true effect. Variation between studies is due to random sampling error only. Model: combines data as if they were one large study (inverse variance weighting). Assumption: studies are homogeneous. If violated (heterogeneity present), fixed effects model can give misleading results.
+
+**When to use:**
+- Studies are very similar (same population, intervention, outcome)
+- Few studies
+- Heterogeneity is low (I² < 25%)
+- Combines studies with precision weights (larger studies weighted more)
+:::
+
+---
+
+## Random Effects Model
+
+::: {.objectives-section}
+Random effects meta-analysis assumes each study estimates a different true effect (drawn from a distribution of effects). Accounts for between-study variation (τ²) in addition to within-study variation. Results in wider confidence intervals than fixed effects; more conservative. Preferred when studies are diverse.
+
+**When to use:**
+- Studies are heterogeneous (different populations, designs, follow-up)
+- Clinical diversity exists
+- Heterogeneity is moderate to high (I² ≥ 50%)
+- More conservative confidence intervals
+:::
+
+---
+
+## Heterogeneity and I² Statistic
+
+::: {.objectives-section}
+Heterogeneity = variation in effects beyond what's expected by chance. Quantified by I² = (Q − df) / Q, where Q is chi-squared test for heterogeneity and df is degrees of freedom. Interpretation: I² = 0% (no heterogeneity), 25-50% (low), 50-75% (moderate), 75-100% (high). Important: I² doesn't depend on number of studies, so small meta-analyses with high I² might still be precise.
+
+**Understanding heterogeneity:**
+- Causes: population differences, intervention variations, outcome definitions, study design
+- I² as percentage of variation due to heterogeneity (vs. chance)
+- p-value for Q-test: p < 0.05 suggests significant heterogeneity
+- But p-value depends on sample size; visual inspection also important
+:::
+
+---
+
+## Exploring Heterogeneity: Subgroup Analysis
+
+::: {.objectives-section}
+When heterogeneity is high, explore causes through subgroup analysis: examine if effect differs by study-level characteristics (e.g., age group, dose, study quality). Provide stratified estimates. Caution: post-hoc subgroup analysis prone to false positives; pre-specify hypotheses. Meta-regression extends this: continuous study-level variables as predictors.
+
+**Proper subgroup analysis:**
+- Pre-specified in protocol before conducting meta-analysis
+- Not too many subgroups (multiple comparisons problem)
+- Adequate studies per subgroup
+- Test interaction (e.g., meta-regression with covariate)
+- Avoid "data dredging"
+:::
+
+---
+
+## Publication Bias and Funnel Plots
+
+::: {.objectives-section}
+Publication bias: studies with positive results more likely published than null results. This distorts pooled estimates upward. Detect using funnel plot: scatter plot of effect size (x-axis) vs. study size (y-axis, often SE or 1/SE). Small studies scatter widely; large studies cluster near true effect. If funnel is asymmetric (missing small studies on null side), publication bias suspected.
+
+**Funnel plot interpretation:**
+- Symmetrical = no obvious bias
+- Asymmetrical = possible bias (missing studies on one side)
+- Beware: asymmetry can also reflect true heterogeneity
+- Statistical tests: Egger's test, Begg's test (use cautiously; low power)
+- Trim-and-fill method: estimates effect if missing studies added
+:::
+
+---
+
+## Assessing Bias Risk in Meta-Analysis
+
+::: {.objectives-section}
+Beyond publication bias, assess risk of bias (RoB) in individual studies using Cochrane RoB tool (for RCTs) or other instruments (for observational studies). Rate domains: selection bias, performance bias, detection bias, attrition bias, reporting bias. Summarize RoB across studies; exclude high RoB studies in sensitivity analysis. Emphasize: garbage in, garbage out.
+
+**Cochrane RoB 2 domains:**
+- Bias from randomization process
+- Bias due to deviations from intended intervention
+- Bias due to missing outcome data
+- Bias in measurement of outcome
+- Bias in reporting outcome selection
+:::
+
+---
+
+## GRADE Approach: Assessing Overall Evidence Quality
+
+::: {.objectives-section}
+GRADE (Grading of Recommendations Assessment, Development and Evaluation) assesses quality of evidence across all studies. Starts with study design (RCTs = high, observational = low). Downgrades for: risk of bias, inconsistency, indirectness, imprecision, publication bias. Results in quality rating: high, moderate, low, very low. This informs confidence in recommendations.
+
+**GRADE quality ratings:**
+- High: further research unlikely to change effect estimate
+- Moderate: further research may change estimate
+- Low: further research very likely to change estimate
+- Very low: very uncertain about effect estimate
+:::
+
+---
+
+## When NOT to Perform Meta-Analysis
+
+::: {.objectives-section}
+Meta-analysis is not always appropriate. If studies are too heterogeneous, pooling gives meaningless average. If few studies, meta-analysis adds little (narrative synthesis better). If significant risk of bias across studies, pooling biased estimate. If studies use different outcome measures, combining may be inappropriate (standardized mean difference needed).
+
+**Red flags suggesting meta-analysis not appropriate:**
+- High clinical heterogeneity (different populations, interventions)
+- Contradictory results (some favor treatment, others harm)
+- Different outcome measures (e.g., one uses symptom score, another uses days off work)
+- Only 2-3 studies
+- High risk of bias in most studies
+:::
+
+---
+
+## Sensitivity Analysis and Robustness
+
+::: {.objectives-section}
+Sensitivity analysis: repeat meta-analysis with different assumptions (e.g., exclude high RoB studies, use random vs. fixed effects, include only published studies vs. grey literature, use different statistical methods) to check robustness. If results change substantially, pooled estimate is not robust; highlight this in conclusions.
+
+**Common sensitivity analyses:**
+- Exclude high RoB studies
+- Use random effects vs. fixed effects
+- Exclude outlier studies
+- Restrict to specific study designs (e.g., RCTs only)
+- Restrict to specific populations
+:::
+
+---
+
+## Interpreting Meta-Analysis Results
+
+::: {.objectives-section}
+Put findings in context: does pooled effect clinically matter? How wide is CI? Is heterogeneity explained? What's the quality of evidence (GRADE)? Even statistically significant effects might be clinically trivial; even non-significant results might have wide CI (imprecision). Discuss implications: strong recommendation? Weak recommendation? Research needed?
+
+**Interpretation checklist:**
+- Pooled effect size and direction
+- 95% CI: does it exclude null? Is it wide?
+- Heterogeneity: explained by subgroups?
+- Quality of evidence (GRADE)
+- Publication bias: present?
+- Sample size adequacy: powered to detect clinically meaningful effect?
+:::
+
+---
+
+## PRISMA Checklist for Meta-Analysis
+
+::: {.objectives-section}
+PRISMA (Preferred Reporting Items for Systematic Reviews and Meta-Analyses) is a 27-item checklist ensuring transparent reporting. Authors should complete and reference PRISMA checklist. Readers can use PRISMA to evaluate completeness of published meta-analyses. Key elements: abstract summary, objectives, methods (search, selection, data extraction), results (characteristics of studies, synthesis, meta-analysis forest plot, quality assessment, publication bias), and discussion.
+
+**PRISMA domains:**
+- Title and abstract
+- Rationale and objectives
+- Eligibility criteria
+- Information sources
+- Data extraction process
+- Risk of bias assessment
+- Statistical methods
+- Results (study selection, characteristics, synthesis)
+- Discussion
+- Funding/conflicts
+:::
+
+---
+
+## Network Meta-Analysis (Introduction)
+
+::: {.objectives-section}
+Network meta-analysis compares multiple treatments indirectly (if no head-to-head trial) by using common comparator. Advanced technique; introduce concept and mention applicability. Example: if Drug A vs. Placebo and Drug B vs. Placebo are studied, infer Drug A vs. Drug B. Assume transitivity (similar populations across comparisons).
+
+**When relevant:**
+- Many treatments for single condition
+- Limited head-to-head trials
+- Want to rank treatments
+- Requires careful assumptions
+:::
+
+---
+
+## Further Learning
+
+::: {.resources-box}
+
+**Books:**
+- Higgins JPT, Green S. *Cochrane Handbook for Systematic Reviews of Interventions* (comprehensive; free online)
+- Sutton AJ, Abrams KR, Jones DR. *Methods for Meta-Analysis in Medical Research*
+- Chalmers I, Altman DG. *Systematic Reviews*
+
+**Videos:**
+- **Cochrane Collaboration** — How to Conduct a Systematic Review
+- **SketchplanationsTV** — Meta-analysis Concept
+- **Greenhalgh** — How to Read a Paper (appraisal chapter)
+
+**Papers:**
+- Moher D, et al. "Preferred reporting items for systematic reviews and meta-analyses: the PRISMA statement." *PLoS Med*. 2009.
+- Liberati A, et al. "The PRISMA statement for reporting systematic reviews and meta-analyses." *BMJ*. 2009.
+- Higgins JPT, Thompson SG. "Quantifying heterogeneity in meta-analysis." *Stat Med*. 2002.
+
+**Interactive Resources:**
+- [Cochrane Training](https://training.cochrane.org/) — Free systematic review courses
+- [GRADE Evidence Profile Tool](https://gradepro.org/) — Create evidence summaries
+- [RevMan](https://training.cochrane.org/online-learning/core-software-cochrane-reviews/revman) — Meta-analysis software (free)
+
+:::
+
+---
+
+## NEET PG Practice MCQs
+
+::: {.neet-practice}
+*MCQs to be developed:*
+
+Example question structures:
+- Reading forest plot: interpreting pooled effect, CIs, heterogeneity
+- Interpreting I² and deciding between fixed and random effects
+- Identifying publication bias from funnel plot
+- Assessing risk of bias in individual studies
+- Understanding PRISMA checklist components
+- Recognizing when meta-analysis is/is not appropriate
+- Interpreting GRADE evidence quality
+- Evaluating subgroup analysis (pre-specified vs. post-hoc)
+- Understanding transitivity assumption in network meta-analysis
+
+*Answers with explanations to be added.*
+:::
+
+---
+
+## Summary
+
+**Key Takeaways:**
+- Systematic review: structured process; meta-analysis: statistical synthesis
+- Forest plot shows individual and pooled effects; diamond = summary estimate
+- Fixed effects: assumes single true effect; random effects: accounts for variation between studies
+- I² quantifies heterogeneity (% variation beyond chance); use I² > 50% as threshold for random effects
+- Publication bias: small/null studies underrepresented; detect via funnel plot asymmetry
+- GRADE assesses overall quality of evidence; guides strength of recommendations
+- Sensitivity analysis: test robustness to assumptions
+- PRISMA checklist: standard for transparent reporting
+- Not all findings suitable for meta-analysis; avoid pooling contradictory/heterogeneous studies
+- Interpret results in clinical context: statistical significance ≠ clinical importance
+
+**Next Steps:**
+- Find a meta-analysis in your field; assess it against PRISMA checklist
+- Interpret forest plot: identify pooled effect, heterogeneity, publication bias indicators
+- Compare fixed vs. random effects conclusions for same dataset
+- Use GRADE to assess quality of evidence in a synthesis
+
+---
+
+## References
+
+::: {#refs}
+:::

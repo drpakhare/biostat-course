@@ -1,0 +1,90 @@
+project:
+  type: book
+  output-dir: docs
+  resources:
+    - slides/*.html
+
+book:
+  title: "Biostatistics for Clinicians"
+  subtitle: "An Interactive, Self-Paced Course with Clinical Examples"
+  cover-image: images/cover.svg
+  author:
+    - name: "Dr. Abhijit Pakhare"
+      affiliation: "Department of Community & Family Medicine, AIIMS Bhopal"
+    - name: "Dr. Ankur Joshi"
+      affiliation: "Department of Community & Family Medicine, AIIMS Bhopal"
+  date: today
+  date-format: "MMMM YYYY"
+  reader-mode: true
+  repo-url: https://github.com/drpakhare/biostat-course
+  repo-actions: [issue]
+  sharing: [twitter, linkedin]
+  sidebar:
+    style: docked
+    search: true
+    collapse-level: 1
+  page-navigation: true
+  chapters:
+    - index.qmd
+    - part: "Part I: Foundations"
+      chapters:
+        - modules/01-why-biostats.qmd
+        - modules/02-descriptive.qmd
+        - modules/03-visualization.qmd
+    - part: "Part II: Probability and Diagnosis"
+      chapters:
+        - modules/04-probability.qmd
+        - modules/05-diagnostic-tests.qmd
+    - part: "Part III: Study Design and Inference"
+      chapters:
+        - modules/06-sampling.qmd
+        - modules/07-study-design.qmd
+        - modules/08-statistical-inference.qmd
+    - part: "Part IV: Comparing Groups"
+      chapters:
+        - modules/09-comparing-means.qmd
+        - modules/10-categorical-data.qmd
+        - modules/11-correlation-regression.qmd
+    - part: "Part V: Advanced Topics"
+      chapters:
+        - modules/12-survival-analysis.qmd
+        - modules/13-meta-analysis.qmd
+        - modules/14-bayesian.qmd
+        - modules/15-machine-learning.qmd
+    - slides.qmd
+    - process.qmd
+    - references.qmd
+
+bibliography: references.bib
+csl: vancouver.csl
+
+format:
+  html:
+    theme:
+      light: cosmo
+      dark: darkly
+    css: styles.css
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    number-depth: 2
+    code-fold: true
+    code-tools: true
+    code-link: true
+    highlight-style: github
+    fig-responsive: true
+    smooth-scroll: true
+    link-external-newwindow: true
+
+execute:
+  freeze: auto
+  warning: false
+  message: false
+
+knitr:
+  opts_chunk:
+    fig.width: 8
+    fig.height: 5
+    fig.align: center
+    dpi: 150
+    out.width: "100%"

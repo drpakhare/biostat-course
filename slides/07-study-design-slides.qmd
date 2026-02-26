@@ -1,0 +1,543 @@
+---
+title: "Study Design, Bias, and Confounding"
+subtitle: "Why Study Design Determines What You Can Conclude"
+format:
+  revealjs:
+    theme: [default, ../styles-slides.css]
+    embed-resources: true
+    slide-number: true
+    show-slide-number: all
+    chalkboard: false
+    footer: "Biostatistics for Clinicians | Module 7"
+    transition: fade
+    incremental: false
+    code-fold: true
+    fig-align: center
+    width: 1280
+    height: 720
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{r}
+#| label: setup
+#| include: false
+library(tidyverse)
+library(kableExtra)
+library(patchwork)
+library(scales)
+library(DiagrammeR)
+set.seed(42)
+```
+
+## Learning Objectives
+
+::: {.incremental}
+1. Describe the **purpose, logic, and key features** of cross-sectional, case-control, cohort, and RCT designs
+2. Choose the **right design** for a given research question
+3. Calculate **prevalence, OR, RR, and AR** from 2×2 tables
+4. Distinguish **selection bias, information bias,** and **confounding**
+5. Use **DAGs** to reason about confounding
+6. Evaluate the **hierarchy of evidence**
+:::
+
+## Clinical Hook: Does Wine Prevent Heart Disease? {.smaller}
+
+::: {.columns}
+::: {.column width="55%"}
+A 10-year cohort study (n = 20,000) found:
+
+**Light wine drinkers had 30% lower MI risk** vs non-drinkers.
+
+Headlines: *"Wine is Cardioprotective!"*
+
+. . .
+
+**But wait —** wine drinkers also:
+
+- Had higher incomes (better healthcare access)
+- Exercised more regularly
+- Had lower smoking rates
+- Ate more fruits and vegetables
+
+**The wine–MI association may be entirely due to confounding by socioeconomic status and lifestyle.**
+
+This module teaches you to think critically about *how* a study was designed before trusting *what* it found.
+:::
+
+::: {.column width="45%"}
+```{r}
+#| fig-height: 5
+#| fig-width: 5.5
+grViz("
+digraph wine_confound {
+  graph[rankdir = TB, bgcolor = 'transparent', nodesep = 1.2, ranksep = 0.8]
+  node [fontname = 'Helvetica', shape = box, style = filled, fontsize = 12, margin = '0.25,0.12']
+
+  C [label = 'SES & Lifestyle\\n(Confounder)', fillcolor = '#E8C07A', fontcolor = '#333']
+  E [label = 'Wine\\nConsumption', fillcolor = '#B8D4E3', fontcolor = '#333']
+  O [label = 'Heart\\nDisease', fillcolor = '#E89595', fontcolor = '#333']
+
+  C -> E [label = '  causes  ', fontsize = 10, fontcolor = '#555']
+  C -> O [label = '  causes  ', fontsize = 10, fontcolor = '#555']
+  E -> O [label = '  ??  ', fontsize = 10, fontcolor = '#c0392b', style = dashed]
+}
+")
+```
+:::
+:::
+
+## Cross-Sectional Study {.smaller}
+
+**Purpose:** Snapshot — measure exposure and outcome **at the same time**
+
+::: {.columns}
+::: {.column width="55%"}
+**How it works:**
+
+1. Select a sample from the population
+2. Measure exposure and outcome simultaneously
+3. Compare prevalence of outcome in exposed vs non-exposed
+
+**Key features:**
+
+- Quick, inexpensive
+- Cannot establish temporal sequence (chicken or egg?)
+- Best for: prevalence estimation, hypothesis generation
+
+**Measure:** Prevalence, Prevalence Odds Ratio (POR)
+:::
+
+::: {.column width="45%"}
+```{r}
+#| fig-height: 4.5
+#| fig-width: 5.5
+grViz("
+digraph cross_sectional {
+  graph[rankdir = LR, bgcolor = 'transparent', nodesep = 0.5, ranksep = 0.7]
+  node [fontname = 'Helvetica', shape = box, style = filled, fontsize = 10, margin = '0.15,0.08']
+
+  A [label = 'Population\\n(one time point)', fillcolor = '#B8D4E3']
+  B [label = 'Exposed', fillcolor = '#E8C07A']
+  C [label = 'Non-exposed', fillcolor = '#A8D5A2']
+  D [label = 'Outcome +', fillcolor = '#E89595']
+  E [label = 'Outcome −', fillcolor = '#D4EAF7']
+  F [label = 'Outcome +', fillcolor = '#E89595']
+  G [label = 'Outcome −', fillcolor = '#D4EAF7']
+
+  edge [fontsize = 8, fontcolor = '#555']
+  A -> B [label = '  classify  ']
+  A -> C [label = '  classify  ']
+  B -> D [label = '  assess  ']
+  B -> E [label = '  assess  ']
+  C -> F [label = '  assess  ']
+  C -> G [label = '  assess  ']
+}
+")
+```
+
+**Example:** Measuring BP and salt intake in 500 adults at a health camp
+:::
+:::
+
+## Case-Control Study {.smaller}
+
+**Purpose:** Start with the **disease** and look **backward** for exposure
+
+::: {.columns}
+::: {.column width="55%"}
+**How it works:**
+
+1. Identify people WITH the disease (cases)
+2. Select similar people WITHOUT the disease (controls)
+3. Compare past exposure in cases vs controls
+
+**Key features:**
+
+- Efficient for **rare diseases** (don't need to wait for events)
+- Relatively quick and cheap
+- Prone to **recall bias** (cases remember exposures better)
+- Cannot calculate incidence or RR directly
+
+**Measure:** Odds Ratio (OR = ad/bc)
+:::
+
+::: {.column width="45%"}
+```{r}
+#| fig-height: 4.5
+#| fig-width: 5.5
+grViz("
+digraph case_control {
+  graph[rankdir = LR, bgcolor = 'transparent', nodesep = 0.5, ranksep = 0.7]
+  node [fontname = 'Helvetica', shape = box, style = filled, fontsize = 10, margin = '0.15,0.08']
+
+  A [label = 'Study\\nBase', fillcolor = '#B8D4E3']
+  B [label = 'Cases\\n(Disease +)', fillcolor = '#E89595']
+  C [label = 'Controls\\n(Disease −)', fillcolor = '#D4EAF7']
+  D [label = 'Exposed', fillcolor = '#E8C07A']
+  E [label = 'Not exposed', fillcolor = '#A8D5A2']
+  F [label = 'Exposed', fillcolor = '#E8C07A']
+  G [label = 'Not exposed', fillcolor = '#A8D5A2']
+
+  edge [fontsize = 8, fontcolor = '#555']
+  A -> B [label = '  select  ']
+  A -> C [label = '  select  ']
+  B -> D [label = '  ascertain  ']
+  B -> E [label = '  ascertain  ']
+  C -> F [label = '  ascertain  ']
+  C -> G [label = '  ascertain  ']
+}
+")
+```
+
+**Example:** 100 oral cancer patients + 200 controls — asked about paan chewing history
+:::
+:::
+
+## Cohort Study {.smaller}
+
+**Purpose:** Start with **exposure** and follow **forward** to see who develops disease
+
+::: {.columns}
+::: {.column width="55%"}
+**How it works:**
+
+1. Identify exposed and non-exposed groups (disease-free at start)
+2. Follow both groups over time
+3. Compare incidence of outcome in exposed vs non-exposed
+
+**Key features:**
+
+- Establishes **temporal sequence** (exposure precedes outcome)
+- Can calculate **incidence** and **RR** directly
+- Efficient for **rare exposures**
+- Expensive and time-consuming (especially prospective)
+- Loss to follow-up is the main threat
+
+**Measure:** Relative Risk (RR), Absolute Risk, Incidence
+:::
+
+::: {.column width="45%"}
+```{r}
+#| fig-height: 4.5
+#| fig-width: 5.5
+grViz("
+digraph cohort {
+  graph[rankdir = LR, bgcolor = 'transparent', nodesep = 0.5, ranksep = 0.7]
+  node [fontname = 'Helvetica', shape = box, style = filled, fontsize = 10, margin = '0.15,0.08']
+
+  A [label = 'Disease-free\\nPopulation', fillcolor = '#B8D4E3']
+  B [label = 'Exposed', fillcolor = '#E8C07A']
+  C [label = 'Non-exposed', fillcolor = '#A8D5A2']
+  D [label = 'Disease +', fillcolor = '#E89595']
+  E [label = 'Disease −', fillcolor = '#D4EAF7']
+  F [label = 'Disease +', fillcolor = '#E89595']
+  G [label = 'Disease −', fillcolor = '#D4EAF7']
+
+  edge [fontsize = 8, fontcolor = '#555']
+  A -> B [label = '  ascertain  ']
+  A -> C [label = '  ascertain  ']
+  B -> D [label = '  follow-up  ']
+  B -> E [label = '  follow-up  ']
+  C -> F [label = '  follow-up  ']
+  C -> G [label = '  follow-up  ']
+}
+")
+```
+
+**Example:** Follow 5,000 factory workers (smokers vs non-smokers) for 10 years for lung disease
+:::
+:::
+
+## Randomized Controlled Trial (RCT) {.smaller}
+
+**Purpose:** The **gold standard** — test whether an intervention *causes* the outcome
+
+::: {.columns}
+::: {.column width="55%"}
+**How it works:**
+
+1. Randomly assign participants to treatment or control
+2. Apply intervention
+3. Follow up and compare outcomes
+
+**Key features:**
+
+- **Randomization** distributes ALL confounders (known and unknown) equally
+- **Only design that can establish causation**
+- Highest internal validity
+- Expensive, time-consuming, not always ethical or feasible
+- Requires equipoise (genuine uncertainty about which is better)
+
+**Measure:** RR, ARR, NNT
+:::
+
+::: {.column width="45%"}
+```{r}
+#| fig-height: 4.5
+#| fig-width: 5.5
+grViz("
+digraph rct {
+  graph[rankdir = LR, bgcolor = 'transparent', nodesep = 0.5, ranksep = 0.7]
+  node [fontname = 'Helvetica', shape = box, style = filled, fontsize = 10, margin = '0.15,0.08']
+
+  A [label = 'Eligible\\nParticipants', fillcolor = '#B8D4E3']
+  B [label = 'Treatment', fillcolor = '#E8C07A']
+  C [label = 'Control', fillcolor = '#A8D5A2']
+  D [label = 'Outcome +', fillcolor = '#E89595']
+  E [label = 'Outcome −', fillcolor = '#D4EAF7']
+  F [label = 'Outcome +', fillcolor = '#E89595']
+  G [label = 'Outcome −', fillcolor = '#D4EAF7']
+
+  edge [fontsize = 8, fontcolor = '#c0392b', fontname = 'Helvetica-Bold']
+  A -> B [label = '  randomize  ']
+  A -> C [label = '  randomize  ']
+  edge [fontsize = 8, fontcolor = '#555', fontname = 'Helvetica']
+  B -> D [label = '  follow-up  ']
+  B -> E [label = '  follow-up  ']
+  C -> F [label = '  follow-up  ']
+  C -> G [label = '  follow-up  ']
+}
+")
+```
+
+**Example:** Randomly assign 200 diabetics to yoga vs standard care for 6 months
+:::
+:::
+
+## Design Comparison at a Glance {.smaller}
+
+```{r}
+comparison <- tibble(
+  Feature = c("Starting point", "Time direction", "Measure", "Can show causation?",
+              "Best for rare...", "Time & cost", "Main threat"),
+  `Cross-sectional` = c("Population", "Snapshot", "Prevalence, POR", "No", "Neither", "Low", "Temporal ambiguity"),
+  `Case-control` = c("Outcome", "Backward", "OR", "Suggests", "**Disease**", "Low", "Recall bias"),
+  Cohort = c("Exposure", "Forward", "RR, AR", "Suggests", "**Exposure**", "High", "Loss to follow-up"),
+  RCT = c("Random assignment", "Forward", "RR, ARR, NNT", "**Yes**", "N/A", "Very high", "Ethical constraints")
+)
+
+kable(comparison, format = "html", escape = FALSE) %>%
+  kable_styling(full_width = TRUE, font_size = 15) %>%
+  row_spec(0, background = "#2c3e50", color = "white", bold = TRUE) %>%
+  column_spec(1, bold = TRUE, width = "16%")
+```
+
+. . .
+
+**Key identifier:** What is the starting point? Disease → case-control. Exposure → cohort. Random allocation → RCT.
+
+## How to Choose a Study Design {.smaller}
+
+| Research Question | Best Design | Why |
+|---|---|---|
+| What is the prevalence of diabetes in rural MP? | Cross-sectional | Snapshot of a population |
+| Is gutka associated with oral cancer? | Case-control | Oral cancer is rare; start from cases |
+| Does air pollution increase asthma in children? | Cohort | Follow exposed vs non-exposed over time |
+| Does a new drug lower BP more than standard? | RCT | Need causal evidence for treatment |
+| Is a screening test effective at reducing mortality? | RCT (or large cohort) | Lead-time bias threatens observational designs |
+
+. . .
+
+**The choice depends on:** research question, outcome frequency, time, ethics, and resources.
+
+## Selection Bias {.smaller}
+
+**Systematic error in how participants are selected or retained.**
+
+::: {.columns}
+::: {.column width="50%"}
+**Common types:**
+
+- **Berkson's bias:** Hospital controls overrepresent comorbidities
+- **Volunteer bias:** Participants differ from non-participants
+- **Loss to follow-up:** Differential dropout distorts results
+- **Healthy worker effect:** Workers are healthier than general population
+:::
+
+::: {.column width="50%"}
+**Example:**
+
+Study of phone radiation and brain cancer using hospital controls.
+
+- Hospital controls may have headache disorders (more phone use)
+- Spurious protective association!
+- **Fix:** Use population-based controls
+:::
+:::
+
+. . .
+
+**Key principle:** Selection bias cannot be corrected after data collection. **It must be prevented by design.**
+
+## Information (Measurement) Bias {.smaller}
+
+**Systematic error in how exposure or outcome is measured.**
+
+| Type | What Happens | Example |
+|------|-------------|---------|
+| **Recall bias** | Cases remember exposure better than controls | Mothers of malformed babies recall drug use more |
+| **Observer bias** | Assessor knows exposure status | Unblinded radiologist reads scans differently |
+| **Misclassification** | Wrong category assignment | BP cuff too small → systematic overestimation |
+| **Hawthorne effect** | Behavior changes when observed | Hand hygiene improves during audit |
+
+. . .
+
+**Solutions:** Blinding, standardized instruments, objective measures, validated questionnaires
+
+## Lead-Time Bias {.smaller}
+
+```{r}
+#| fig-height: 5
+#| fig-width: 11
+
+ggplot() +
+  geom_segment(aes(x = 2010, xend = 2020, y = 2, yend = 2), linewidth = 2, color = "#3498db") +
+  geom_segment(aes(x = 2010, xend = 2020, y = 1, yend = 1), linewidth = 2, color = "#e74c3c") +
+  geom_point(aes(x = 2015, y = 2), size = 5, color = "#2c3e50") +
+  geom_point(aes(x = 2012, y = 1), size = 5, color = "#2c3e50") +
+  geom_point(aes(x = 2020, y = c(1, 2)), size = 5, shape = 4, stroke = 3, color = "#2c3e50") +
+  annotate("text", x = 2015, y = 2.3, label = "Symptom diagnosis\n(2015)", fontface = "bold", size = 4) +
+  annotate("text", x = 2012, y = 0.7, label = "Screen diagnosis\n(2012)", fontface = "bold", size = 4) +
+  annotate("text", x = 2020.5, y = 1.5, label = "Both die\n2020", fontface = "bold", size = 4, color = "#c0392b") +
+  annotate("segment", x = 2012, xend = 2015, y = 1.5, yend = 1.5, linewidth = 1.5, color = "#f39c12",
+           arrow = arrow(ends = "both", length = unit(0.2, "cm"))) +
+  annotate("text", x = 2013.5, y = 1.7, label = "Lead time\n(3 years)", fontface = "bold", size = 4, color = "#f39c12") +
+  annotate("text", x = 2017.5, y = 2.3, label = "Survival = 5 years", size = 4, color = "#3498db") +
+  annotate("text", x = 2016, y = 0.7, label = "Survival = 8 years", size = 4, color = "#e74c3c") +
+  scale_x_continuous(breaks = 2010:2020) +
+  ylim(0.3, 2.8) +
+  labs(title = "Lead-Time Bias: Screening Looks Better Than It Is",
+       subtitle = "Both patients die at the same time — screening just detects earlier",
+       x = "Year", y = NULL) +
+  theme_minimal(base_size = 14) +
+  theme(plot.title = element_text(face = "bold"), axis.text.y = element_blank(), panel.grid.major.y = element_blank())
+```
+
+## What Is Confounding? {.smaller}
+
+A **confounder** is a variable that:
+
+1. Is associated with the **exposure**
+2. Is an independent cause of the **outcome**
+3. Is NOT on the causal pathway between exposure and outcome
+
+```{r}
+#| fig-height: 3.5
+#| fig-width: 8
+grViz("
+digraph confound_generic {
+  graph[rankdir = TB, bgcolor = 'transparent', nodesep = 1.0, ranksep = 0.8]
+  node [fontname = 'Helvetica', shape = box, style = filled, fontsize = 13, margin = '0.3,0.15']
+
+  C [label = 'CONFOUNDER\\n(C)', fillcolor = '#E8C07A', fontcolor = '#333']
+  E [label = 'EXPOSURE\\n(E)', fillcolor = '#B8D4E3', fontcolor = '#333']
+  O [label = 'OUTCOME\\n(O)', fillcolor = '#E89595', fontcolor = '#333']
+
+  C -> E [label = '  associated  ', fontsize = 10, fontcolor = '#555']
+  C -> O [label = '  causes  ', fontsize = 10, fontcolor = '#555']
+  E -> O [label = '  ??  ', fontsize = 10, fontcolor = '#c0392b', style = dashed, penwidth = 2]
+}
+")
+```
+
+**Example:** SES confounds the wine → heart disease association (see clinical hook)
+
+## The Wine Paradox DAG {.smaller}
+
+```{r}
+#| fig-height: 4.5
+#| fig-width: 10
+grViz("
+digraph wine {
+  graph[rankdir = TB, bgcolor = 'transparent', nodesep = 1.2, ranksep = 0.8]
+  node [fontname = 'Helvetica', shape = box, style = filled, fontsize = 12, margin = '0.3,0.15']
+
+  SES [label = 'Socioeconomic\\nStatus & Lifestyle', fillcolor = '#E8C07A']
+  Wine [label = 'Wine\\nConsumption', fillcolor = '#B8D4E3']
+  CVD [label = 'Cardiovascular\\nDisease', fillcolor = '#E89595']
+  Ex [label = 'Exercise', fillcolor = '#D4EAF7']
+  Diet [label = 'Diet Quality', fillcolor = '#D4EAF7']
+  Access [label = 'Healthcare\\nAccess', fillcolor = '#D4EAF7']
+
+  SES -> Wine [label = '  ↑income → ↑wine  ', fontsize = 9, fontcolor = '#555']
+  SES -> Ex [fontsize = 9]
+  SES -> Diet [fontsize = 9]
+  SES -> Access [fontsize = 9]
+  Ex -> CVD [label = '  protects  ', fontsize = 9, fontcolor = '#27ae60']
+  Diet -> CVD [label = '  protects  ', fontsize = 9, fontcolor = '#27ae60']
+  Access -> CVD [label = '  protects  ', fontsize = 9, fontcolor = '#27ae60']
+  Wine -> CVD [label = '  ??  ', fontsize = 10, fontcolor = '#c0392b', style = dashed, penwidth = 2]
+}
+")
+```
+
+**After adjusting for SES and lifestyle, the wine–CVD association largely disappears.**
+
+## Methods to Control Confounding {.smaller}
+
+| Stage | Method | How It Works |
+|-------|--------|-----|
+| **Design** | Randomization | Distributes ALL confounders equally (known + unknown) |
+| **Design** | Restriction | Limit to one stratum (e.g., only males) |
+| **Design** | Matching | Select controls with same confounder values |
+| **Analysis** | Stratification | Analyze within confounder strata separately |
+| **Analysis** | Multivariable regression | Adjust for confounders in model |
+
+. . .
+
+**Only randomization controls for UNKNOWN confounders.** All other methods require you to identify and measure confounders in advance.
+
+## Hierarchy of Evidence {.smaller}
+
+```{r}
+grViz("
+digraph evidence_pyramid {
+  graph[rankdir = TB, bgcolor = 'transparent', nodesep = 0.3, ranksep = 0.4]
+  node [fontname = 'Helvetica', shape = box, style = filled, fontsize = 11, margin = '0.2,0.1']
+
+  SR  [label = 'Systematic Reviews\\n& Meta-analyses', fillcolor = '#27ae60', fontcolor = 'white', width = 3]
+  RCT [label = 'Randomized Controlled Trials', fillcolor = '#2ecc71', fontcolor = 'white', width = 4]
+  COH [label = 'Cohort Studies', fillcolor = '#f1c40f', fontcolor = '#333', width = 5]
+  CC  [label = 'Case-Control Studies', fillcolor = '#e67e22', fontcolor = 'white', width = 6]
+  CS  [label = 'Cross-Sectional Surveys', fillcolor = '#e74c3c', fontcolor = 'white', width = 7]
+  CR  [label = 'Case Reports / Expert Opinion', fillcolor = '#c0392b', fontcolor = 'white', width = 8]
+
+  SR -> RCT [arrowhead = none]
+  RCT -> COH [arrowhead = none]
+  COH -> CC [arrowhead = none]
+  CC -> CS [arrowhead = none]
+  CS -> CR [arrowhead = none]
+}
+")
+```
+
+**Higher = stronger evidence for causation** — but not always feasible or ethical!
+
+## Exercise: Identify the Design {.smaller}
+
+For each scenario, identify the study design:
+
+::: {.incremental}
+1. *"Measured BP and salt intake in 500 adults at a health camp"* → **Cross-sectional** (snapshot of exposure + outcome)
+
+2. *"Identified 100 oral cancer patients and 200 controls, asked about paan chewing"* → **Case-control** (start from disease, look back at exposure)
+
+3. *"Followed 5,000 factory workers for 10 years, comparing smokers vs non-smokers for lung disease"* → **Cohort** (classify by exposure, follow forward for outcome)
+
+4. *"Randomly assigned 200 diabetics to yoga vs standard care for 6 months"* → **RCT** (random allocation of intervention)
+:::
+
+## Key Takeaways
+
+::: {.incremental}
+1. **Cross-sectional** = snapshot; quick but cannot establish causation
+2. **Case-control** = start from disease, look backward; efficient for rare diseases
+3. **Cohort** = start from exposure, follow forward; can calculate RR and incidence
+4. **RCT** = random allocation; the only design that establishes causation
+5. **Selection bias** must be prevented by design — cannot be fixed in analysis
+6. **Confounders** must satisfy three criteria; use **DAGs** to reason about them
+7. Choose your design based on: **research question, outcome frequency, time, ethics, and resources**
+:::

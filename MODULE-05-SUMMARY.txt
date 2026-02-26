@@ -1,0 +1,255 @@
+================================================================================
+MODULE 5: DIAGNOSTIC TEST EVALUATION
+================================================================================
+File: /sessions/loving-inspiring-shannon/mnt/outputs/biostat-course/modules/05-diagnostic-tests.qmd
+Total Lines: 1,443
+Format: Quarto Book Chapter (.qmd)
+
+================================================================================
+STRUCTURE OVERVIEW
+================================================================================
+
+1. YAML HEADER
+   - Title: "Diagnostic Test Evaluation"
+   - Subtitle: "From Clinical Decisions to Statistical Validity"
+   - Categories: Diagnostic Statistics, Clinical Epidemiology, ROC Analysis
+
+2. SETUP R CHUNK
+   - Libraries: tidyverse, kableExtra, webexercises, patchwork, scales
+   - Helper functions: theme_clean(), create_waffle_data(), mcq()
+   - Seed: 42
+
+3. LEARNING OBJECTIVES (10 objectives)
+   - Construct 2×2 tables
+   - Calculate sensitivity/specificity
+   - Compute PPV/NPV
+   - Understand prevalence effects
+   - Likelihood ratios & Bayesian inference
+   - ROC curve interpretation
+   - Indian clinical applications
+   - Clinical decision-making
+
+4. CLINICAL HOOK: COVID-19 Mass Screening Crisis
+   - Real scenario: 95% sensitive test, 2% prevalence, only 16% PPV
+   - Demonstrates the base rate fallacy
+   - Motivates the entire module
+
+5. CONTENT PARTS
+
+   Part 1: The 2×2 Contingency Table
+   - Table construction with COVID example (10,000 patients)
+   - TP/FP/FN/TN definitions
+   - Waffle plot visualization (fig-covid-waffle)
+
+   Part 2: Properties of the Test — Sensitivity & Specificity
+   - Formula box with LaTeX equations
+   - Key insight: test vs. population properties
+   - Worked example: COVID test (95% Sen, 90% Spec)
+   - Visual interpretation charts (2 plots side-by-side)
+
+   Part 3: Properties of Test IN Population — Predictive Values
+   - Formula box: PPV and NPV with clinical interpretation
+   - Shocking example: 95% sensitive test → 16% PPV at 2% prevalence
+   - PPV vs prevalence curve (fig-ppv-prevalence)
+   - Common mistake box: sensitivity ≠ PPV
+   - Shows PPV ranges from 16% to 99% with prevalence
+
+   Part 4: Likelihood Ratios
+   - Formula box: LR+ and LR− equations & interpretation
+   - COVID example: LR+ = 9.5, LR− = 0.056
+   - Prevalence-independent property explained
+
+   Part 5: Bayesian Reasoning
+   - Formula box: Pre-test odds → Post-test odds using LR
+   - Worked example: symptomatic patient vs. mass screening
+   - Shows how same test gives 16% PPV vs. 93% PPV in different contexts
+   - Fagan nomogram visualization (fig-fagan-nomogram)
+   - Three clinical scenarios illustrated
+
+   Part 6: ROC Curves and Cutoff Selection
+   - Key concept box: sensitivity-specificity trade-off
+   - ROC curve for COVID with AUC = 0.87 (fig-roc-curve-covid)
+   - AUC interpretation guide
+   - Comparison of good vs. fair tests (fig-roc-comparison)
+   - Common mistake: ignoring ROC curves
+
+   Part 7: Indian Clinical Scenarios
+   
+   Scenario 1: TB Diagnostics in Rural India
+   - 3% prevalence, GeneXpert MTB/RIF (98% Sen, 99% Spec)
+   - PPV = 97%, NPV = 99.9%
+   - Figure: TB test distribution (fig-tb-india-scenario)
+   - Metrics table showing excellent diagnostic utility
+   
+   Scenario 2: Malaria RDT in Endemic Region
+   - 25% prevalence during monsoon (vs. 2% dry season)
+   - RDT (85% Sen, 95% Spec)
+   - PPV comparison: 13% (dry) vs. 81% (monsoon)
+   - Figure: season-dependent predictive value (fig-malaria-scenario)
+
+   Part 8: Choosing the Right Test
+   - Table: when to prioritize Sensitivity vs. Specificity
+   - 6 clinical scenarios with explanations
+   - Examples: screening, confirmation, rare disease, toxic treatment
+
+8. SUMMARY AND KEY TAKEAWAYS
+   - Framework diagram (fig-diagnostic-summary)
+   - Single most important insight highlighted
+
+9. FURTHER LEARNING RESOURCES
+   - Video lectures: StatQuest (Josh Starmer), Zedstatistics, MarinStatsLectures
+   - Textbooks: Bland & Altman, Kirkwood & Sterne, Sackett et al.
+   - Indian context: NTEP, ICMR guidelines
+
+10. PRACTICE MCQs: 5 NEET PG-level questions
+    
+    Q1: Screening rare disease → Base rate fallacy (PPV in low prevalence)
+    Q2: TB test → Calculate false negatives from sensitivity
+    Q3: COVID outbreak → Bayesian calculation with high prevalence
+    Q4: ROC curve near diagonal → Poor discrimination (AUC ≈ 0.5)
+    Q5: Cancer screening → Low specificity in low prevalence = false positives
+    
+    Format: Each MCQ has:
+    - Question text
+    - R code chunk with calculations
+    - 4 answer options
+    - Correct answer with detailed explanation
+    - Webexercises solution box
+
+11. REFERENCES (10 citations)
+    - Bland & Altman on diagnostic tests
+    - Fagan on nomograms
+    - Kirkwood & Sterne on statistics
+    - Sackett on clinical epidemiology
+    - Swets on diagnostic accuracy
+    - WHO COVID guidelines
+    - Youden index
+    - ROC plots (Zweig & Campbell)
+
+================================================================================
+FIGURES GENERATED
+================================================================================
+
+1. fig-covid-waffle
+   - Waffle/icon array showing TP/FP/FN/TN distribution
+   - COVID example with massive FP problem
+
+2. fig-sens-spec-interpretation
+   - Two side-by-side bar charts
+   - Left: Sensitivity among diseased patients (95%)
+   - Right: Specificity among non-diseased patients (90%)
+
+3. fig-ppv-prevalence
+   - Line plot: PPV (y-axis) vs. Prevalence (x-axis)
+   - Three annotated scenarios: COVID (2%), Flu (10%), Endemic (50%)
+   - Shows dramatic PPV collapse at low prevalence
+
+4. fig-roc-curve-covid
+   - Full ROC curve with AUC = 0.87
+   - Diagonal reference line
+   - Key cutoff points marked
+   - Perfect test region annotated
+
+5. fig-roc-comparison
+   - Two overlaid ROC curves
+   - Good test (AUC = 0.91) vs. Fair test (AUC = 0.72)
+   - Visual demonstration of AUC differences
+
+6. fig-tb-india-scenario
+   - TB distribution visualization + metrics table
+   - Shows excellent PPV/NPV in TB context
+   - 3% prevalence, 98% Sen, 99% Spec
+
+7. fig-malaria-scenario
+   - PPV curve across seasons
+   - Four prevalence points: 2%, 10%, 25%, 50%
+   - Shows seasonal variation in test utility
+
+8. fig-diagnostic-summary
+   - Comprehensive framework diagram
+   - Text box with key formulas and relationships
+
+9. fig-fagan-nomogram
+   - Pre-test to post-test probability visualization
+   - Red line for positive tests, blue for negative
+   - Three scenario annotations with specific values
+
+================================================================================
+KEY PEDAGOGICAL FEATURES
+================================================================================
+
+✓ Clinical Hook: Real COVID mass screening scenario motivates learning
+✓ 2×2 Tables: Concrete COVID example with actual numbers
+✓ Prevalence Effect: THE critical insight - PPV plummets at low prevalence
+✓ Bayesian Reasoning: Shows how pre-test probability transforms with test results
+✓ ROC Curves: Visual trade-off between sensitivity and specificity
+✓ Likelihood Ratios: Prevalence-independent measure for test comparison
+✓ Indian Context: TB, malaria, COVID examples with real epidemiology
+✓ NEET PG MCQs: 5 board-standard questions testing deep understanding
+✓ Common Mistakes: ⚠️ boxes highlighting typical misconceptions
+✓ Formula Boxes: LaTeX equations in highlighted containers
+✓ Key Concepts: Boxed essential insights for quick review
+✓ Ggplot2 Visualizations: Publication-quality figures with clear annotations
+✓ Worked Examples: Every concept includes numerical walk-throughs
+✓ Further Resources: Video channels and textbook references
+
+================================================================================
+NEET PG EXAM RELEVANCE
+================================================================================
+
+This module directly addresses common NEET PG pitfalls:
+
+1. Base Rate Fallacy: Q1 directly tests understanding of prevalence effect
+2. Sensitivity ≠ Predictive Value: Q2-Q5 reinforce this distinction
+3. Likelihood Ratios: Q3 uses Bayesian updating with LR+
+4. ROC Interpretation: Q4 tests AUC understanding
+5. Clinical Context: Q5 shows how test properties change with prevalence
+6. Indian Scenarios: TB and malaria examples align with Indian exam focus
+7. Post-test Probability: Multiple questions test Bayesian calculation
+
+Estimated exam relevance: HIGH
+- These concepts appear in nearly every NEET PG diagnostic test question
+- The base rate fallacy is a classic exam trap
+- ROC curves are increasingly tested
+
+================================================================================
+TECHNICAL SPECIFICATIONS
+================================================================================
+
+Format: Quarto Markdown (.qmd)
+Rendering: Compatible with Quarto HTML, PDF (with xelatex)
+R Version: 3.6+ (tidyverse, ggplot2, dplyr)
+Dependencies: tidyverse, kableExtra, webexercises, patchwork, scales
+Code Chunks: 15 R chunks (9 with figures, 5 with MCQ code, 1 setup)
+LaTeX Math: 20+ equations in formula boxes
+Tables: 2 kable tables (2×2 contingency, test choice guide)
+Div Classes: clinical-hook, formula-box, key-concept, common-mistake, resources-box, neet-practice
+
+================================================================================
+USAGE NOTES FOR INSTRUCTORS
+================================================================================
+
+1. Before rendering, ensure R packages installed:
+   install.packages(c("tidyverse", "kableExtra", "webexercises", "patchwork", "scales"))
+
+2. The webexercises library requires:
+   - quarto >= 1.2
+   - proper knitting to HTML
+
+3. For AIIMS classroom:
+   - Figures are publication-ready
+   - Use "Sensitivity vs. Specificity trade-off" part for real-time discussion
+   - COVID/TB/malaria examples resonate with Indian medical context
+
+4. Assessment options:
+   - Use the 5 MCQs as quiz
+   - Extend with PPV/NPV calculations in problem sets
+   - Ask students to compute LR for other tests
+
+5. Clinical Hook structure:
+   - Present the COVID dilemma first (without revealing answer)
+   - Ask students to predict PPV (they'll likely guess 95%)
+   - Reveal the math (shocking moment!)
+   - Then build framework to explain the discrepancy
+
+================================================================================

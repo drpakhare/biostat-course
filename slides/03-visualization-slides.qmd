@@ -1,0 +1,414 @@
+---
+title: "Visualizing Clinical Data"
+subtitle: "From Raw Numbers to Clear Communication"
+format:
+  revealjs:
+    theme: [default, ../styles-slides.css]
+    embed-resources: true
+    slide-number: true
+    show-slide-number: all
+    chalkboard: false
+    footer: "Biostatistics for Clinicians | Module 3"
+    transition: fade
+    incremental: false
+    code-fold: true
+    fig-align: center
+    width: 1280
+    height: 720
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{r}
+#| label: setup
+#| include: false
+library(tidyverse)
+library(kableExtra)
+library(patchwork)
+library(scales)
+set.seed(42)
+```
+
+## Learning Objectives
+
+::: {.incremental}
+1. Identify principles of **honest data visualization**
+2. Select appropriate **chart types** for your data and question
+3. Explain the **Grammar of Graphics** (ggplot2's 7 layers)
+4. Apply **Tufte's data-ink ratio** to clinical figures
+5. Recognise common **graphical distortions** (truncated axes, 3D effects)
+6. Design figures with **accessible** colour palettes
+7. Critique visualizations from published literature
+:::
+
+## Clinical Hook: The Pharma Pitch {.smaller}
+
+::: {.columns}
+::: {.column width="50%"}
+```{r}
+#| fig-height: 4.5
+#| fig-width: 5
+
+bp_data <- tibble(Drug = c("New Drug", "Competitor"), SBP = c(138, 140))
+
+ggplot(bp_data, aes(x = Drug, y = SBP, fill = Drug)) +
+  geom_col(width = 0.6, show.legend = FALSE) +
+  scale_fill_manual(values = c("#e74c3c", "#3498db")) +
+  coord_cartesian(ylim = c(130, 145)) +
+  labs(title = "Truncated Axis", subtitle = "Y starts at 130 mmHg",
+       y = "SBP after treatment (mmHg)", x = NULL) +
+  theme_minimal(base_size = 13) +
+  theme(plot.title = element_text(face = "bold", colour = "#dc3545"))
+```
+:::
+
+::: {.column width="50%"}
+```{r}
+#| fig-height: 4.5
+#| fig-width: 5
+
+ggplot(bp_data, aes(x = Drug, y = SBP, fill = Drug)) +
+  geom_col(width = 0.6, show.legend = FALSE) +
+  scale_fill_manual(values = c("#e74c3c", "#3498db")) +
+  coord_cartesian(ylim = c(0, 150)) +
+  labs(title = "Honest Axis", subtitle = "Y starts at 0",
+       y = "SBP after treatment (mmHg)", x = NULL) +
+  theme_minimal(base_size = 13) +
+  theme(plot.title = element_text(face = "bold", colour = "#28a745"))
+```
+:::
+:::
+
+. . .
+
+> The actual difference is **2 mmHg**. The truncated axis makes it look enormous. **Bar charts must start at zero.**
+
+## The Grammar of Graphics {.smaller}
+
+Every ggplot2 figure = **7 layers** stacked together:
+
+::: {.columns}
+::: {.column width="45%"}
+1. **Data** — the data frame
+2. **Aesthetics** — x, y, colour, size
+3. **Geometries** — points, bars, lines
+4. **Facets** — panels by category
+5. **Statistics** — smoothers, counts
+6. **Coordinates** — Cartesian, polar
+7. **Theme** — fonts, colours, grid
+:::
+
+::: {.column width="55%"}
+```{r}
+#| fig-height: 4.5
+#| fig-width: 6
+
+layers <- tibble(
+  layer = factor(c("Theme", "Coordinates", "Statistics", "Facets",
+                    "Geometries", "Aesthetics", "Data"),
+                 levels = c("Theme", "Coordinates", "Statistics", "Facets",
+                            "Geometries", "Aesthetics", "Data")),
+  y = 7:1,
+  colour = c("#6c757d", "#17a2b8", "#ffc107", "#28a745",
+             "#dc3545", "#6f42c1", "#0077b6"))
+
+ggplot(layers, aes(x = 1, y = y)) +
+  geom_tile(aes(fill = colour), width = 2.5, height = 0.85, colour = "white", linewidth = 1.5) +
+  geom_text(aes(label = layer), fontface = "bold", size = 5, colour = "white") +
+  scale_fill_identity() +
+  coord_cartesian(xlim = c(-0.5, 2.5)) +
+  theme_void(base_size = 13) +
+  theme(plot.title = element_text(face = "bold", hjust = 0.5)) +
+  labs(title = "The 7 Layers of ggplot2")
+```
+:::
+:::
+
+## Which Chart Should I Use?
+
+| Your data | Your question | Best chart |
+|:----------|:-------------|:-----------|
+| 1 categorical | How many in each group? | **Bar chart** |
+| 1 continuous | Distribution shape? | **Histogram / density** |
+| 1 categorical + 1 continuous | Groups differ? | **Box / violin plot** |
+| 2 continuous | Relationship? | **Scatter plot** |
+| Continuous over time | Trends? | **Line chart** |
+| 3+ variables | Complex patterns? | **Heat map / facets** |
+
+. . .
+
+Explore: [From Data to Viz](https://www.data-to-viz.com/) | [FT Visual Vocabulary](https://ft-interactive.github.io/visual-vocabulary/)
+
+## Bar Charts: Categorical Data
+
+```{r}
+#| label: fig-bar
+#| fig-height: 4
+#| fig-width: 9
+
+blood_groups <- tibble(
+  group = factor(c("O+", "A+", "B+", "AB+", "O-", "A-", "B-", "AB-"),
+                 levels = c("O+", "A+", "B+", "AB+", "O-", "A-", "B-", "AB-")),
+  count = c(175, 110, 120, 30, 30, 18, 12, 5))
+
+ggplot(blood_groups, aes(x = group, y = count, fill = group)) +
+  geom_col(show.legend = FALSE, width = 0.7) +
+  geom_text(aes(label = count), vjust = -0.5, fontface = "bold", size = 4) +
+  scale_fill_manual(values = c(rep("#c0392b", 4), rep("#2c3e50", 4))) +
+  labs(title = "Blood Group Distribution — Hospital Blood Bank (n = 500)",
+       x = "Blood Group", y = "Number of Donors") +
+  theme_minimal(base_size = 13) + theme(plot.title = element_text(face = "bold"))
+```
+
+::: {.callout-warning}
+## Never Use Bar Charts for Continuous Data!
+"Dynamite plots" (bar + error bar) hide the distribution. Use box/violin plots instead.
+:::
+
+## Histograms and Density Plots
+
+```{r}
+#| label: fig-hist-dens
+#| fig-height: 4
+#| fig-width: 10
+
+hb_data <- tibble(hb = c(rnorm(400, 12.5, 1.2), rnorm(100, 9.0, 1.0)))
+
+p_hist <- ggplot(hb_data, aes(x = hb)) +
+  geom_histogram(binwidth = 0.5, fill = "#3498db", colour = "white", alpha = 0.8) +
+  geom_vline(xintercept = 12, linetype = "dashed", colour = "#e74c3c", linewidth = 0.8) +
+  labs(title = "Histogram", x = "Hemoglobin (g/dL)", y = "Count") +
+  theme_minimal(base_size = 12) + theme(plot.title = element_text(face = "bold"))
+
+p_dens <- ggplot(hb_data, aes(x = hb)) +
+  geom_density(fill = "#3498db", alpha = 0.4, colour = "#2c3e50") +
+  geom_vline(xintercept = 12, linetype = "dashed", colour = "#e74c3c", linewidth = 0.8) +
+  labs(title = "Density Plot", x = "Hemoglobin (g/dL)", y = "Density") +
+  theme_minimal(base_size = 12) + theme(plot.title = element_text(face = "bold"))
+
+p_hist + p_dens +
+  plot_annotation(title = "Hemoglobin in 500 Women — Bimodal Distribution (Anaemia Subgroup)",
+    theme = theme(plot.title = element_text(face = "bold", size = 14)))
+```
+
+## Box Plot vs Violin: Revealing Hidden Patterns
+
+```{r}
+#| label: fig-box-violin
+#| fig-height: 4.5
+#| fig-width: 10
+
+treatment_data <- tibble(
+  group = rep(c("Standard Care", "Drug A", "Drug B"), each = 100),
+  los = c(rgamma(100, shape = 3, rate = 0.5), rnorm(100, mean = 5, sd = 1.2),
+          c(rnorm(60, mean = 4, sd = 0.8), rnorm(40, mean = 8, sd = 0.8)))
+) %>% mutate(group = factor(group, levels = c("Standard Care", "Drug A", "Drug B")))
+
+p_box <- ggplot(treatment_data, aes(x = group, y = los, fill = group)) +
+  geom_boxplot(alpha = 0.7) + scale_fill_manual(values = c("#0077b6", "#28a745", "#e74c3c")) +
+  labs(title = "Box Plot", y = "LOS (days)", x = NULL) +
+  theme_minimal(base_size = 12) + theme(plot.title = element_text(face = "bold"), legend.position = "none")
+
+p_viol <- ggplot(treatment_data, aes(x = group, y = los, fill = group)) +
+  geom_violin(alpha = 0.7) + geom_boxplot(width = 0.15, fill = "white", alpha = 0.8, outlier.shape = NA) +
+  scale_fill_manual(values = c("#0077b6", "#28a745", "#e74c3c")) +
+  labs(title = "Violin + Box", y = "LOS (days)", x = NULL) +
+  theme_minimal(base_size = 12) + theme(plot.title = element_text(face = "bold"), legend.position = "none")
+
+p_box + p_viol +
+  plot_annotation(title = "Drug B is bimodal — only the violin reveals this!",
+    theme = theme(plot.title = element_text(face = "bold", size = 15)))
+```
+
+## Scatter Plots: Relationships
+
+```{r}
+#| label: fig-scatter
+#| fig-height: 4.5
+#| fig-width: 10
+
+gfr_data <- tibble(age = runif(200, 25, 85),
+  egfr = 120 - 0.8 * age + rnorm(200, 0, 12),
+  stage = case_when(egfr >= 90 ~ "G1", egfr >= 60 ~ "G2", egfr >= 30 ~ "G3", TRUE ~ "G4-5")) %>%
+  mutate(stage = factor(stage, levels = c("G1", "G2", "G3", "G4-5")))
+
+ggplot(gfr_data, aes(x = age, y = egfr)) +
+  geom_point(aes(colour = stage), alpha = 0.6, size = 2) +
+  geom_smooth(method = "lm", colour = "#2c3e50", se = TRUE) +
+  geom_hline(yintercept = c(90, 60, 30), linetype = "dashed",
+             colour = c("#ffc107", "#e67e22", "#dc3545"), linewidth = 0.5) +
+  scale_colour_manual(values = c("#28a745", "#ffc107", "#e67e22", "#dc3545")) +
+  labs(title = "eGFR Declines with Age", x = "Age (years)", y = "eGFR", colour = "CKD Stage") +
+  theme_minimal(base_size = 13) +
+  theme(plot.title = element_text(face = "bold"), legend.position = "bottom")
+```
+
+## Line Charts: Trends Over Time
+
+```{r}
+#| label: fig-line
+#| fig-height: 4.5
+#| fig-width: 10
+
+set.seed(123)
+trial_data <- expand_grid(patient_id = 1:50, arm = c("Metformin", "Met + SGLT2i"), month = 0:12) %>%
+  mutate(baseline = rnorm(n(), 8.5, 0.8)) %>%
+  group_by(patient_id, arm) %>%
+  mutate(hba1c = case_when(
+    arm == "Metformin" ~ baseline[1] - 0.08 * month + cumsum(rnorm(n(), 0, 0.1)),
+    TRUE ~ baseline[1] - 0.14 * month + cumsum(rnorm(n(), 0, 0.1)))) %>% ungroup()
+
+trial_summary <- trial_data %>% group_by(arm, month) %>%
+  summarise(m = mean(hba1c), se = sd(hba1c)/sqrt(n()),
+            lo = m - 1.96*se, hi = m + 1.96*se, .groups = "drop")
+
+ggplot(trial_summary, aes(x = month, y = m, colour = arm, fill = arm)) +
+  geom_ribbon(aes(ymin = lo, ymax = hi), alpha = 0.2, colour = NA) +
+  geom_line(linewidth = 1.2) + geom_point(size = 2.5) +
+  geom_hline(yintercept = 7, linetype = "dashed", colour = "grey50") +
+  annotate("text", x = 0.3, y = 6.85, label = "ADA target", colour = "grey50", fontface = "italic") +
+  scale_colour_manual(values = c("#0077b6", "#e74c3c")) +
+  scale_fill_manual(values = c("#0077b6", "#e74c3c")) +
+  labs(title = "HbA1c Over 12 Months — RCT", x = "Month", y = "Mean HbA1c (%)",
+       colour = "Arm", fill = "Arm") +
+  theme_minimal(base_size = 13) +
+  theme(plot.title = element_text(face = "bold"), legend.position = "bottom")
+```
+
+## Tufte's Data-Ink Ratio
+
+```{r}
+#| label: fig-dataink
+#| fig-height: 4
+#| fig-width: 10
+
+demo <- tibble(cat = c("A", "B", "C", "D"), val = c(23, 45, 31, 52))
+
+p_clutter <- ggplot(demo, aes(x = cat, y = val, fill = cat)) +
+  geom_col(show.legend = FALSE, colour = "black", linewidth = 1) +
+  scale_fill_manual(values = c("#ff6b6b", "#4ecdc4", "#45b7d1", "#96ceb4")) +
+  labs(title = "Low Data-Ink", y = "Value", x = "Category") +
+  theme(panel.background = element_rect(fill = "#f0f0f0"),
+        panel.grid.major = element_line(colour = "white", linewidth = 1.2),
+        panel.border = element_rect(colour = "black", fill = NA, linewidth = 2),
+        plot.title = element_text(face = "bold"))
+
+p_clean <- ggplot(demo, aes(x = cat, y = val)) +
+  geom_col(fill = "#2c3e50", width = 0.6) +
+  geom_text(aes(label = val), vjust = -0.5, fontface = "bold", size = 4.5) +
+  labs(title = "High Data-Ink", y = "Value", x = NULL) +
+  theme_minimal(base_size = 13) +
+  theme(panel.grid.major.x = element_blank(), panel.grid.minor = element_blank(),
+        plot.title = element_text(face = "bold"))
+
+p_clutter + p_clean +
+  plot_annotation(title = "Less Decoration = More Information",
+    theme = theme(plot.title = element_text(face = "bold", size = 15)))
+```
+
+> **Goal:** Maximise ink that shows data. Remove everything else.
+
+## Common Graphical Distortions
+
+| Distortion | How it misleads | Fix |
+|:-----------|:---------------|:----|
+| Truncated axis | Exaggerates small differences | Start bars at zero |
+| Dual y-axes | False correlations | Two separate panels |
+| 3D effects | Distorts heights/angles | Always use 2D |
+| Area encoding | Doubling radius = 4× area | Use position or length |
+| Cherry-picked range | Hides the full trend | Show full time range |
+
+## Accessibility: Colour-Blind Palettes
+
+```{r}
+#| label: fig-cb
+#| fig-height: 4
+#| fig-width: 10
+
+set.seed(99)
+cb_data <- tibble(x = rep(1:5, each = 4),
+  group = rep(c("A", "B", "C", "D"), 5),
+  y = rnorm(20, mean = rep(c(10, 15, 12, 18), 5), sd = 2))
+
+p_rg <- ggplot(cb_data, aes(x = factor(x), y = y, fill = group)) +
+  geom_col(position = "dodge") +
+  scale_fill_manual(values = c("#d62728", "#2ca02c", "#ff7f0e", "#1f77b4")) +
+  labs(title = "Red-Green", subtitle = "Bad for ~8% of men", x = NULL, y = NULL) +
+  theme_minimal(base_size = 12) + theme(plot.title = element_text(face = "bold"), legend.position = "bottom")
+
+p_vir <- ggplot(cb_data, aes(x = factor(x), y = y, fill = group)) +
+  geom_col(position = "dodge") + scale_fill_viridis_d() +
+  labs(title = "Viridis", subtitle = "Safe for all", x = NULL, y = NULL) +
+  theme_minimal(base_size = 12) + theme(plot.title = element_text(face = "bold"), legend.position = "bottom")
+
+p_rg + p_vir +
+  plot_annotation(title = "Colour-Blind Friendly Palettes",
+    theme = theme(plot.title = element_text(face = "bold", size = 15)))
+```
+
+## Accessibility Checklist
+
+::: {.incremental}
+1. Use **colour-blind safe palettes**: `viridis`, `cividis`, `okabe_ito`
+2. **Don't rely on colour alone**: add shapes, line types, or direct labels
+3. Ensure **sufficient contrast** (4.5:1 ratio minimum)
+4. **Readable font sizes**: ≥10pt for axis labels, ≥12pt for titles
+5. Add **alt-text** in Quarto: `#| fig-alt: "description"`
+6. **Test your palette** with `colorblindr` package
+:::
+
+## Publication-Ready Example
+
+```{r}
+#| fig-height: 4.5
+#| fig-width: 10
+
+bmi_data <- tibble(
+  diabetes = rep(c("No Diabetes", "Pre-Diabetes", "Type 2 DM"), c(300, 150, 100)),
+  bmi = c(rnorm(300, 24, 3.5), rnorm(150, 28, 3.0), rnorm(100, 32, 4.0))
+) %>% mutate(diabetes = factor(diabetes, levels = c("No Diabetes", "Pre-Diabetes", "Type 2 DM")))
+
+ggplot(bmi_data, aes(x = diabetes, y = bmi, fill = diabetes)) +
+  geom_violin(alpha = 0.7, colour = "grey30", trim = FALSE) +
+  geom_boxplot(width = 0.15, fill = "white", alpha = 0.8, outlier.shape = NA) +
+  stat_summary(fun = mean, geom = "point", shape = 18, size = 3, colour = "#2c3e50") +
+  geom_hline(yintercept = c(25, 30), linetype = "dashed",
+             colour = c("#e67e22", "#dc3545"), linewidth = 0.5) +
+  scale_fill_viridis_d(option = "D", begin = 0.3, end = 0.9) +
+  labs(title = "BMI Distribution by Diabetes Status",
+       subtitle = "Diamond = mean | Box = median + IQR | Violin = full distribution",
+       x = NULL, y = expression("BMI (kg/m"^2*")"), caption = "n = 550") +
+  theme_minimal(base_size = 13) +
+  theme(plot.title = element_text(face = "bold", size = 15), legend.position = "none",
+        panel.grid.major.x = element_blank())
+```
+
+## Key Takeaways
+
+1. **Choose the chart for the question** — bar (counts), histogram (distribution), box/violin (groups), scatter (relationship), line (trends)
+
+2. **Grammar of Graphics** = 7 swappable layers
+
+3. **Honest axes** — bar charts **must** start at zero; no 3D effects
+
+4. **Data-ink ratio** — remove everything that isn't data
+
+5. **Accessibility** — viridis palette + shape/line redundancy
+
+6. **Always plot first** — Anscombe's quartet applies to everything
+
+## Resources
+
+**Graph Galleries:**
+
+- [The R Graph Gallery](https://www.r-graph-gallery.com/) | [From Data to Viz](https://www.data-to-viz.com/)
+- [FT Visual Vocabulary](https://ft-interactive.github.io/visual-vocabulary/) | [Chart Chooser](https://depictdatastudio.com/charts/)
+- [chart.guide](https://chart.guide/topics/chartguide-poster-4-0/) | [Health Data Viz](https://drpakhare.github.io/health-viz-website/)
+
+**Books:**
+
+- Tufte, *The Visual Display of Quantitative Information*
+- Wilke, [Fundamentals of Data Visualization](https://clauswilke.com/dataviz/)
+- Healy, *Data Visualization: A Practical Introduction*

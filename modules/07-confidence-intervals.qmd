@@ -1,0 +1,242 @@
+---
+title: "Estimation and Confidence Intervals"
+subtitle: "From Sample to Population — With Uncertainty Quantified"
+description: "Master the distinction between point and interval estimation. Learn to interpret and calculate confidence intervals for means and proportions, and understand what affects CI width."
+categories: [confidence-intervals, estimation, inference, uncertainty]
+---
+
+```{r}
+#| label: setup
+#| include: false
+library(tidyverse)
+library(kableExtra)
+library(webexercises)
+library(patchwork)
+library(scales)
+```
+
+## Learning Objectives
+
+1. Distinguish between point estimates and interval estimates
+2. Explain the correct interpretation of a 95% confidence interval
+3. Calculate and interpret confidence intervals for population means
+4. Calculate and interpret confidence intervals for population proportions
+5. Identify factors that affect confidence interval width (sample size, variability, confidence level)
+6. Apply the concept of margin of error in clinical studies
+7. Recognize and avoid common misinterpretations of confidence intervals
+8. Use confidence intervals to evaluate clinical significance beyond statistical significance
+
+---
+
+## Clinical Hook
+
+::: {.clinical-hook}
+**Antihypertensive Trial:** A new drug reduces systolic blood pressure by 5 mmHg (95% CI: −2 to +12 mmHg) compared to placebo. Is this effective? The confidence interval crosses zero, meaning we cannot rule out no effect. Yet the point estimate suggests benefit. This is why CIs matter more than p-values for clinical decisions.
+:::
+
+---
+
+## Point vs. Interval Estimation
+
+::: {.objectives-section}
+Introduce the distinction: a point estimate (e.g., sample mean = 142 mmHg) is a single value; an interval estimate (e.g., 95% CI 138-146 mmHg) provides a range with associated confidence. Explain why point estimates alone are insufficient: sampling variability means different samples give different estimates. An interval captures our uncertainty.
+
+**Key concepts to develop:**
+- Sample vs. population parameters
+- Standard error as a measure of point estimate variability
+- Why larger samples have smaller standard errors (central limit theorem preview)
+- Precision vs. accuracy
+:::
+
+---
+
+## The Concept of Confidence
+
+::: {.objectives-section}
+Clarify the correct interpretation of "95% confidence interval": if we repeated the study many times, the confidence interval would contain the true parameter 95% of the time. NOT "there's a 95% probability the parameter is in this interval" (once the data are collected, the parameter either is or isn't in the interval). Use simulations to visualize this concept.
+
+**Common misinterpretations to address:**
+- "95% of the data falls within the CI" (wrong; this is a description of the data, not the parameter)
+- "95% chance the true value is in the CI" (wrong; probability is frequentist, applies to the procedure, not the result)
+- Bayesian credible intervals (different beast; mention for completeness)
+:::
+
+---
+
+## Confidence Intervals for Population Means
+
+::: {.objectives-section}
+Derive the formula for CI of a mean: sample mean ± (critical value × standard error). Explain the standard error: SE = SD / √n. Show how t-distribution is used (instead of z) for smaller samples. Work through examples: HbA1c in diabetic patients, creatinine clearance in renal disease patients. Discuss assumptions: normality (checked with Q-Q plot or Shapiro-Wilk test).
+
+**Computational steps:**
+- Calculate sample mean and standard deviation
+- Determine degrees of freedom (n - 1)
+- Find t-critical value from t-table or software
+- Calculate SE = SD / √n
+- Interval = mean ± t* × SE
+- Interpret in context
+:::
+
+---
+
+## Confidence Intervals for Proportions
+
+::: {.objectives-section}
+Introduce proportions as estimates of probability (e.g., disease prevalence, treatment response rate). Show how a proportion is a special case of a mean (binary 0/1). Explain the standard error for proportions: SE = √[p(1-p)/n]. Discuss the "rule of thumb": normal approximation valid if np and n(1-p) both ≥ 5. For small counts, use exact binomial method (Wilson score interval) or Clopper-Pearson.
+
+**Examples to develop:**
+- Survey: what proportion of patients would accept a new treatment?
+- Clinical trial: proportion with adverse event
+- Diagnostic accuracy: proportion with true positive result
+:::
+
+---
+
+## Interpreting CI in Clinical Context
+
+::: {.objectives-section}
+Show how CIs inform clinical significance. A 95% CI that excludes zero (or null value) suggests statistical significance; a narrow CI suggests precision. But statistical significance ≠ clinical significance. A CI for a small but clinically meaningful difference is useful; a CI for a tiny effect is not, even if significant.
+
+**Clinical interpretation framework:**
+- Does CI cross the null value? (implications for statistical significance)
+- Is the entire CI clinically meaningful? (e.g., all values > 10 mmHg reduction)
+- Is the entire CI clinically trivial? (e.g., all values < 1 mmHg)
+- Is the CI mixed (part meaningful, part trivial)? (uncertainty about clinical relevance)
+:::
+
+---
+
+## Factors Affecting Confidence Interval Width
+
+::: {.objectives-section}
+Demonstrate how sample size, standard deviation, and confidence level affect CI width. Larger sample → narrower CI. Higher variability → wider CI. Higher confidence (99% vs. 95%) → wider CI. Use simulations to show these relationships intuitively. Derive the relationship mathematically.
+
+**Manipulable factors:**
+- **Sample size (most important for research planning):** Double n, reduce CI width by ~1/√2
+- **Variability (depends on outcome and population):** More homogeneous sample → narrower CI
+- **Confidence level (conventional choice):** 95% standard, but 90% or 99% possible
+:::
+
+---
+
+## Confidence Intervals for Differences Between Groups
+
+::: {.objectives-section}
+Extend to comparing two groups: difference in means (treatment vs. control) or difference in proportions. Show that standard error of difference accounts for variability in both groups. Discuss when CI can be used for inference: CI for difference excluding zero ≡ p < 0.05.
+
+**Examples:**
+- Two-group t-test: CI for mean difference
+- Comparison of drug response rates: CI for difference in proportions
+- Non-inferiority trials: does CI exclude the non-inferiority margin?
+:::
+
+---
+
+## Margin of Error and Study Planning
+
+::: {.objectives-section}
+Explain margin of error (ME): the radius of the confidence interval, ME = critical value × SE. For estimation studies (not hypothesis tests), plan sample size based on desired margin of error. "I want to estimate disease prevalence within ± 3%." This leads directly to sample size calculation.
+
+**Applications to design:**
+- Prevalence surveys: "estimate within ± 5%"
+- Biomarker studies: "estimate mean within ± 2 ng/mL"
+- Feasibility studies: "estimate response rate within ± 15%"
+:::
+
+---
+
+## Confidence Intervals vs. Hypothesis Tests
+
+::: {.objectives-section}
+Highlight the complementary nature: CIs provide both inference and effect size; p-values only test null hypothesis. A study with large effect but small sample may have wide CI; a study with tiny effect but huge sample may have narrow CI and small p-value. CIs give readers more information.
+
+**Comparison:**
+- p-value: binary (significant or not), doesn't convey effect size
+- CI: shows range of plausible values and precision, allows judgment of clinical significance
+- Modern practice: report both, but interpret CI primarily
+:::
+
+---
+
+## Critiquing Published CIs
+
+::: {.objectives-section}
+Teach readers to evaluate CIs in papers: Are they reported? Are they reasonable in width? Do they exclude the null value? Are they interpreted correctly by the authors? Look for common mistakes: misinterpretation of CI as "probability the parameter is in the interval," or focusing on p-value while ignoring CI width.
+
+**Checklist:**
+- CI reported or can be calculated?
+- Width reasonable given sample size?
+- CI interpreted correctly in text?
+- Do conclusions match the CI (e.g., "no difference" when CI is wide)?
+:::
+
+---
+
+## Further Learning
+
+::: {.resources-box}
+
+**Books:**
+- Douglas Altman, *Practical Statistics for Medical Research*
+- Andrew Gelman et al., *Bayesian Data Analysis* (includes discussion of CIs vs. credible intervals)
+- Steven Goodman, "A Dirty Dozen: Twelve P-value Misconceptions" (teaches CIs as alternative)
+
+**Videos:**
+- **StatQuest with Josh Starmer** — Confidence Intervals
+- **Khan Academy** — Constructing Confidence Intervals
+- **Crash Course** — Margin of Error and Confidence Intervals
+
+**Papers:**
+- Altman DG, Bland JM. "Absence of evidence is not evidence of absence." *BMJ*. 1995.
+- Greenland S, et al. "Statistical tests, P values, confidence intervals, and power." *Eur J Epidemiol*. 2016.
+
+**Interactive Resources:**
+- [Seeing Theory — Confidence Intervals](https://seeing-theory.brown.edu/frequentist-inference/index.html)
+- [CI Simulator](https://rpsychologist.com/d3/CI/) — Visualize repeated sampling
+
+:::
+
+---
+
+## NEET PG Practice MCQs
+
+::: {.neet-practice}
+*MCQs to be developed:*
+
+Example question structures:
+- Interpreting a given 95% CI for a mean or proportion
+- Calculating CI width given sample size and variability
+- Identifying what affects CI width (sample size, SD, confidence level)
+- Comparing two CIs to infer statistical significance
+- Determining sample size given desired margin of error
+- Recognizing correct vs. incorrect interpretations of CIs
+- Evaluating CI in context of clinical significance
+
+*Answers with step-by-step calculations to be added.*
+:::
+
+---
+
+## Summary
+
+**Key Takeaways:**
+- A confidence interval quantifies uncertainty in a point estimate
+- 95% CI means: if repeated, 95% of such CIs would contain the true parameter
+- CI width reflects precision; narrower = more precise (larger sample, less variability)
+- CIs that exclude zero/null value indicate statistical significance (p < 0.05)
+- Statistical significance ≠ clinical significance; evaluate entire CI for meaningful values
+- For planning studies, use desired margin of error
+- CIs communicate both effect size and uncertainty; p-values do not
+- Report and interpret CIs primarily; use p-values secondarily or not at all
+
+**Next Steps:**
+- Calculate a 95% CI for a parameter of interest from your own data
+- Compare published CIs in similar studies; note how width varies with sample size
+- Practice interpreting CIs that cross zero, exceed null value, or have mixed clinical meaning
+
+---
+
+## References
+
+::: {#refs}
+:::

@@ -1,0 +1,350 @@
+---
+title: "Bias, Confounding, and Critical Appraisal"
+subtitle: "Beyond Statistical Significance — Evaluating Study Quality"
+description: "Master sources of bias in study designs. Understand confounding and effect modification. Learn to critically appraise research using CONSORT, STROBE, and PRISMA checklists."
+categories: [bias, confounding, critical-appraisal, study-quality]
+---
+
+```{r}
+#| label: setup
+#| include: false
+library(tidyverse)
+library(kableExtra)
+library(webexercises)
+library(patchwork)
+library(scales)
+```
+
+## Learning Objectives
+
+1. Define and identify selection bias, information (measurement) bias, and performance bias
+2. Distinguish between confounding, reverse causation, and collider bias
+3. Understand effect modification and interaction
+4. Use directed acyclic graphs (DAGs) to identify confounders and mediators
+5. Apply CONSORT, STROBE, and PRISMA checklists
+6. Assess overall quality of evidence using GRADE
+7. Recognize limitations of observational studies and how to evaluate causal claims
+8. Critique papers systematically using formal critical appraisal tools
+
+---
+
+## Clinical Hook
+
+::: {.clinical-hook}
+**Hormone Replacement Therapy Reversal:** Observational studies showed HRT reduced cardiovascular disease (HR = 0.7) and mortality. Recommendations made. Then the Women's Health Initiative RCT found no benefit (HR = 1.0). Why? The observational studies had unmeasured confounding: healthier, more adherent women chose HRT. The RCT, via randomization, broke this confounding. This illustrates why bias matters more than sample size.
+:::
+
+---
+
+## Selection Bias
+
+::: {.objectives-section}
+Selection bias occurs when the study population differs systematically from the target population. Types: self-selection (who chooses to participate), healthcare access (who gets diagnosed), healthy user effect (exposed group is healthier for reasons unrelated to exposure). Examples: online surveys exclude less educated; hospital-based controls differ from population controls; screening detects better prognosis cases.
+
+**Manifestations:**
+- Participation bias: subjects who enroll differ from non-enrollees
+- Healthy volunteer effect: study participants are healthier than general population
+- Loss to follow-up: reasons for dropout differ by exposure/outcome
+- Berkson's bias: in hospital-based case-control, disease and exposure appear associated due to selection of hospitalized patients
+- Collider bias: conditioning on common outcome of two causes introduces spurious association
+:::
+
+---
+
+## Information Bias (Measurement Error)
+
+::: {.objectives-section}
+Information bias (misclassification): exposure or outcome measured incorrectly. Non-differential misclassification affects both groups equally (e.g., self-reported height overestimated by both cases and controls); this typically biases toward null. Differential misclassification affects groups differently (e.g., cases better remember past exposures); direction of bias unpredictable.
+
+**Examples:**
+- Recall bias: cases (with disease) better remember past exposures than controls
+- Social desirability bias: underreport smoking, overreport exercise
+- Measurement error: imprecise lab test, poor interview technique
+- Outcome misclassification: diagnostic error
+:::
+
+---
+
+## Performance Bias and Detection Bias
+
+::: {.objectives-section}
+Performance bias: systematic differences in intervention delivery or care beyond intended intervention. Example: physicians may provide additional care to placebo group if they know it's placebo. Detection bias: systematic differences in outcome assessment. Example: assessor may measure outcomes more carefully in treatment group if aware of assignment.
+
+**Preventing with:**
+- Blinding subjects and providers to assignment
+- Standardized protocols
+- Independent outcome assessors
+- Automated measurements (if possible)
+:::
+
+---
+
+## Confounding: Definition and Examples
+
+::: {.objectives-section}
+Confounding: a third variable (confounder) is associated with both exposure and outcome, and is not on the causal pathway. If unaccounted for, confounder distorts the estimate of exposure-outcome association. Example: age confounds the relationship between smoking and lung cancer (age associated with both). Confounding can exaggerate, reduce, or even reverse the true association.
+
+**Requirements for confounding:**
+1. Confounder associated with exposure
+2. Confounder associated with outcome (independent of exposure)
+3. Confounder not on causal pathway (not a mediator)
+4. Confounder differs between exposure groups
+:::
+
+---
+
+## Distinguishing Confounding from Mediation
+
+::: {.objectives-section}
+Confounding ≠ mediation. Confounding is a "back-door" path: exposure ← confounder → outcome. Mediation is a "front-door" path: exposure → mediator → outcome. Confounding distorts the exposure-outcome association; mediation explains part of it. DAGs help visualize these distinctions.
+
+**Examples:**
+- Confounding: age → smoking and age → lung cancer (age confounds)
+- Mediation: smoking → lung damage → lung cancer (lung damage mediates)
+- Mixture: age confounds, nicotine dependence mediates
+:::
+
+---
+
+## Directed Acyclic Graphs (DAGs)
+
+::: {.objectives-section}
+DAGs are visual tools showing causal relationships. Nodes = variables; arrows = causal direction. Use to identify confounders (must have arrows pointing to both exposure and outcome, and no arrows from exposure to confounder). Provides logic for deciding which variables to measure and adjust for.
+
+**Reading DAGs:**
+- Front-door path (exposure → mediator → outcome): mediation
+- Back-door path (exposure ← confounder → outcome): confounding
+- Collider (exposure → collider ← outcome): conditioning on collider creates bias
+- Mediator (exposure → mediator → outcome): adjusting removes total effect
+:::
+
+---
+
+## Strategies to Reduce Confounding
+
+::: {.objectives-section}
+In design phase: randomization (gold standard; breaks association between exposure and all confounders), matching (match cases to controls on confounder), restriction (enroll only homogeneous subgroup). In analysis phase: stratification (separate estimates by confounder level), regression adjustment, propensity score methods.
+
+**Choosing approach:**
+- Randomization: breaks all confounding (RCT)
+- Matching (design): reduces confounding for matched variables; but complicates analysis
+- Stratification (analysis): simple but requires adequate sample size per stratum
+- Regression (analysis): efficient use of data; assumes linear relationship
+- Propensity score: mimics randomization using observed covariates
+:::
+
+---
+
+## Effect Modification and Interaction
+
+::: {.objectives-section}
+Effect modification: exposure effect differs by level of third variable (e.g., treatment effect larger in younger than older patients). Indicates biological interaction. Different from confounding. Assessed by: comparing treatment effect across strata, or including interaction term in regression (exposure × modifier term). Important for clinical practice: results may not apply uniformly.
+
+**Identifying:**
+- Stratified analysis: different stratum-specific treatment effects
+- Regression interaction term: product of exposure × modifier
+- Visual: forest plot where CIs for subgroups don't overlap or are notably different
+:::
+
+---
+
+## Reverse Causation (Reverse Causality)
+
+::: {.objectives-section}
+Reverse causation: the "outcome" actually causes the "exposure," not vice versa. Example: does depression cause poor diet, or does poor diet cause depression? (Likely bidirectional). Temporal sequence (exposure before outcome) is essential to establish causality. Prospective studies minimize reverse causation risk.
+
+**Evidence of reverse causation:**
+- Outcome precedes exposure in time
+- Removal of exposure after outcome change doesn't improve outcome
+- Outcome predicts future exposure
+:::
+
+---
+
+## CONSORT Checklist for RCTs
+
+::: {.objectives-section}
+CONSORT (Consolidated Standards of Reporting Trials) is a 25-item checklist for reporting RCTs. Elements: title and abstract, background, methods (trial design, participants, interventions, outcomes, sample size, sequence generation, allocation concealment, blinding, statistical methods), results (participant flow diagram, baseline characteristics, outcome measures, safety), and discussion.
+
+**Critical CONSORT items:**
+- Allocation concealment described?
+- Blinding specified (who, what)?
+- Flow diagram showing enrollment, losses, analysis?
+- Intention-to-treat analysis described?
+- Baseline characteristics balanced?
+- Number and type of adverse events reported?
+:::
+
+---
+
+## STROBE Checklist for Observational Studies
+
+::: {.objectives-section}
+STROBE (Strengthening the Reporting of Observational Studies in Epidemiology) is a 22-item checklist for cohort, case-control, and cross-sectional studies. Similar structure to CONSORT but appropriate for observational designs. Elements: background, objectives, study design, setting, participants, variables, data sources, biases, study size, statistical methods, results (participants, outcomes), and discussion.
+
+**Critical STROBE items:**
+- Study design clearly stated (cohort/case-control/cross-sectional)?
+- Data sources and participant selection described?
+- Exposure definition and outcome definition clear?
+- Sources of bias acknowledged?
+- Confounders identified and how adjusted?
+- Study size adequate (power analysis for observational studies)?
+:::
+
+---
+
+## PRISMA Checklist for Systematic Reviews (Briefly)
+
+::: {.objectives-section}
+PRISMA (27 items) covered in meta-analysis module; briefly reiterate key elements here. Protocol registration, comprehensive search strategy, explicit eligibility criteria, bias risk assessment across studies, heterogeneity evaluation, publication bias assessment.
+
+**Key for critical appraisal:**
+- Was protocol pre-registered before conducting review?
+- How comprehensive was literature search? (multiple databases, grey literature?)
+- How many reviewers independently assessed inclusion/exclusion?
+- GRADE quality assessment reported?
+- Conflicts of interest disclosed?
+:::
+
+---
+
+## GRADE Evidence Quality Assessment
+
+::: {.objectives-section}
+GRADE (used in systematic reviews and clinical recommendations) assesses quality of evidence based on: study design (RCT high, observational low), risk of bias, inconsistency, indirectness, imprecision, publication bias. Results in: high, moderate, low, or very low confidence. Informs strength of recommendations (strong vs. conditional).
+
+**Downgrades:**
+- Risk of bias: methodological flaws
+- Inconsistency: heterogeneous results
+- Indirectness: population/intervention/comparator differs from question
+- Imprecision: wide CI crossing null
+- Publication bias: suspected asymmetry in funnel plot
+:::
+
+---
+
+## Critical Appraisal Workflow
+
+::: {.objectives-section}
+Systematic approach to reading papers: (1) identify study design and research question, (2) assess selection bias (who participated? representative?), (3) check for confounding (confounders measured? adjusted?), (4) evaluate information bias (outcomes measured validly?), (5) review statistical analysis (appropriate methods? power?), (6) examine results for plausibility, (7) assess generalizability.
+
+**Appraisal checklist:**
+- Is the research question clear?
+- Is the study design appropriate?
+- Are inclusion/exclusion criteria justified?
+- Are potential confounders identified and adjusted?
+- Are outcomes measured reliably and validly?
+- Is the sample size adequate?
+- Are the results presented clearly (with CIs)?
+- Are limitations acknowledged?
+- Are conclusions supported by results?
+:::
+
+---
+
+## Causality Criteria (Bradford Hill)
+
+::: {.objectives-section}
+Criteria for inferring causality (covered briefly in design module; expand here): strength of association (large effect), consistency (replicated across populations), dose-response, temporal sequence, plausibility, experiment (RCT evidence), analogy. No single criterion sufficient; weight evidence holistically. Observational studies rarely meet all criteria.
+
+**Applying to literature:**
+- Does study meet temporal sequence (exposure before outcome)?
+- Is association strong and consistent across studies?
+- Is dose-response gradient evident?
+- Is there biologically plausible mechanism?
+- Do RCTs support causal claim?
+:::
+
+---
+
+## Interpreting P-values and CIs in Context of Bias
+
+::: {.objectives-section}
+A p-value or narrow CI doesn't guarantee validity if bias is present. An observational study with p < 0.001 proving causation is unreliable if unmeasured confounding likely. Conversely, a wide CI with p > 0.05 in a well-designed RCT is more credible. Study design matters more than statistical significance.
+
+**Framework:**
+- Statistical significance (p-value, CI) tells you precision
+- Risk of bias assessment tells you validity
+- Both needed for credible conclusion
+- High p-value + good design = null finding credible
+- Low p-value + high bias = finding questionable
+:::
+
+---
+
+## Further Learning
+
+::: {.resources-box}
+
+**Books:**
+- Greenland S, Rothman KJ, Lash TL. *Modern Epidemiology* (3rd ed.) — Comprehensive on bias and confounding
+- Patricia Muñoz Guajardo, *Biostatistics: A Foundation for Analysis in the Health Sciences* — Practical examples
+- Petrie A, Sabin C. *Medical Statistics at a Glance* (3rd ed.)
+
+**Videos:**
+- **Crash Course** — Common Statistical Mistakes
+- **Brandon Foltz** — Confounding Variables
+- **Paul Dickman** — Bias in Epidemiology
+
+**Papers:**
+- Schulz KF, Altman DG, Moher D. "CONSORT 2010 statement." *Lancet*. 2010.
+- von Elm E, et al. "STROBE statement." *PLoS Med*. 2007.
+- Moher D, et al. "PRISMA statement." *PLoS Med*. 2009.
+
+**Interactive Resources:**
+- [CONSORT Checklist](https://www.consort-statement.org/)
+- [STROBE Checklist](https://www.strobe-statement.org/)
+- [Cochrane Risk of Bias Tool](https://training.cochrane.org/online-learning/core-software-cochrane-reviews/robvis) — Visual RoB summaries
+
+:::
+
+---
+
+## NEET PG Practice MCQs
+
+::: {.neet-practice}
+*MCQs to be developed:*
+
+Example question structures:
+- Identifying types of bias (selection, information, performance, detection)
+- Recognizing confounding vs. mediation scenarios
+- Using DAGs to identify confounders and mediators
+- Assessing confounding control in published studies
+- Interpreting effect modification in subgroup analysis
+- Applying CONSORT/STROBE/PRISMA checklist to published papers
+- Evaluating causal claims using Bradford Hill criteria
+- Determining overall quality of evidence using GRADE
+- Recognizing limitations of observational studies
+
+*Answers with step-by-step reasoning to be added.*
+:::
+
+---
+
+## Summary
+
+**Key Takeaways:**
+- Selection bias: study population differs from target population
+- Information bias: exposure/outcome measured incorrectly (differential → unpredictable; non-differential → toward null)
+- Performance/detection bias: systematic differences in care or assessment by group
+- Confounding: third variable related to both exposure and outcome, not on causal pathway
+- Effect modification: exposure effect varies by level of third variable (not bias; indicates interaction)
+- Reverse causation: outcome causes exposure (not vice versa); temporal sequence essential
+- DAGs: visual tool for identifying confounders and mediators
+- Study design determines confounding potential: RCT > cohort > case-control > cross-sectional
+- CONSORT, STROBE, PRISMA: checklists for transparent reporting
+- GRADE: assess overall evidence quality across studies
+- Statistical significance ≠ causal proof; assess bias alongside p-values
+
+**Next Steps:**
+- Draw DAG for a clinical research question; identify confounders
+- Apply CONSORT or STROBE checklist to a recent paper; identify reporting gaps
+- Evaluate a causal claim using Bradford Hill criteria
+- Assess risk of bias in a cohort study; determine if findings are credible
+
+---
+
+## References
+
+::: {#refs}
+:::

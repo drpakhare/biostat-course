@@ -1,0 +1,87 @@
+---
+title: "Machine Learning in Medical Sciences"
+subtitle: "When Algorithms Meet Clinical Data"
+description: |
+  A gentle introduction to machine learning concepts for clinicians: supervised vs
+  unsupervised learning, classification and regression, model validation,
+  and real-world applications in diagnosis, prognosis, and drug discovery.
+  No programming prerequisite — focuses on intuition and clinical interpretation.
+categories:
+  - Machine Learning
+  - Artificial Intelligence
+  - Clinical Prediction
+  - Data Science
+---
+
+```{r}
+#| label: setup
+#| include: false
+
+library(tidyverse)
+library(kableExtra)
+source("../R/mcq.R")
+library(patchwork)
+library(scales)
+
+set.seed(42)
+
+theme_clean <- function() {
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold", size = 13),
+    plot.subtitle = element_text(size = 11, color = "gray40"),
+    panel.grid.minor = element_blank(),
+    panel.grid.major = element_line(color = "gray90", linewidth = 0.3),
+    axis.text = element_text(size = 10),
+    axis.title = element_text(size = 11, face = "bold"),
+    legend.position = "bottom",
+    legend.title = element_text(face = "bold")
+  )
+}
+```
+
+::: {.callout-note appearance="minimal"}
+**Lecture slides for this module:** [Open Slides](../slides/15-ml-slides.html){target="_blank"}
+:::
+
+## Learning Objectives
+
+By the end of this module, you will be able to:
+
+1. Distinguish between **supervised and unsupervised** learning
+2. Understand common algorithms: **logistic regression, decision trees, random forests, neural networks**
+3. Explain the **bias-variance trade-off** and why overfitting is dangerous
+4. Interpret **model validation** metrics (accuracy, AUC, sensitivity, specificity — connecting back to Module 5)
+5. Understand **training, validation, and test sets** — why splitting data matters
+6. Evaluate ML claims in medical literature critically
+7. Recognise **limitations and ethical concerns** of ML in healthcare
+8. Identify promising **Indian applications** of ML in medicine
+
+---
+
+:::{.clinical-hook}
+## Coming Soon
+
+This module is under development. It will provide a conceptual introduction to machine learning for MBBS students — no coding required, but with R demonstrations for those interested.
+
+**Planned content includes:**
+
+- What is machine learning? (Pattern recognition from data)
+- Supervised learning: classification (disease/no disease) and regression (predicting BP)
+- From logistic regression (Module 11) to decision trees to random forests
+- Neural networks: the basic intuition (without the math)
+- The critical problem: overfitting — why a model can be perfect on training data and useless on new patients
+- Cross-validation and the train/test split
+- Connecting to Module 5: AUC, ROC curves, sensitivity/specificity as ML evaluation metrics
+- Real Indian applications: retinal screening for diabetic retinopathy (Google/Aravind), TB detection from chest X-rays, ECG analysis for arrhythmia
+- Ethical concerns: algorithmic bias, black-box decisions, data privacy
+- The future: AI as clinical decision support, not replacement
+- Indian clinical examples throughout
+:::
+
+---
+
+## References
+
+::: {#refs}
+:::

@@ -1,0 +1,803 @@
+---
+title: "Diagnostic Test Evaluation"
+subtitle: "The Clinician's Toolkit for Measuring How Well Tests Work"
+format:
+  revealjs:
+    theme: [default, ../styles-slides.css]
+    embed-resources: true
+    slide-number: true
+    show-slide-number: all
+    chalkboard: false
+    footer: "Biostatistics for Clinicians | Module 5"
+    transition: fade
+    incremental: false
+    code-fold: true
+    fig-align: center
+    width: 1280
+    height: 720
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{r}
+#| label: setup
+#| include: false
+library(tidyverse)
+library(kableExtra)
+library(patchwork)
+library(scales)
+set.seed(42)
+
+# Shared parameters
+total_n <- 1000
+prev <- 0.05
+sens_via <- 0.80; spec_via <- 0.85
+sens_pap <- 0.60; spec_pap <- 0.95
+
+diseased <- total_n * prev
+healthy  <- total_n * (1 - prev)
+
+tp_via <- round(diseased * sens_via); fn_via <- diseased - tp_via
+fp_via <- round(healthy * (1 - spec_via)); tn_via <- healthy - fp_via
+
+tp_pap <- round(diseased * sens_pap); fn_pap <- diseased - tp_pap
+fp_pap <- round(healthy * (1 - spec_pap)); tn_pap <- healthy - fp_pap
+
+ppv_via <- tp_via / (tp_via + fp_via)
+npv_via <- tn_via / (fn_via + tn_via)
+ppv_pap <- tp_pap / (tp_pap + fp_pap)
+npv_pap <- tn_pap / (fn_pap + tn_pap)
+
+lr_pos_via <- sens_via / (1 - spec_via)
+lr_neg_via <- (1 - sens_via) / spec_via
+lr_pos_pap <- sens_pap / (1 - spec_pap)
+lr_neg_pap <- (1 - sens_pap) / spec_pap
+
+calc_post <- function(pre, lr) {
+  odds_pre <- pre / (1 - pre)
+  odds_post <- odds_pre * lr
+  odds_post / (1 + odds_post)
+}
+```
+
+## Learning Objectives
+
+::: {.incremental}
+1. Construct a **2×2 table** with index test in rows, gold standard in columns
+2. Calculate **sensitivity, specificity, PPV, NPV** from the 2×2 table
+3. Explain how **prevalence transforms** predictive values
+4. Compute and interpret **likelihood ratios** (LR+, LR−)
+5. Use the **Fagan nomogram** for pre-test → post-test probability
+6. Construct and interpret **ROC curves** and AUC
+7. Choose wisely: when to prioritise **sensitivity vs specificity**
+:::
+
+## Clinical Hook: Cervical Cancer Screening in Rural India {.smaller}
+
+::: {.columns}
+::: {.column width="55%"}
+India bears **¼ of the global cervical cancer burden**.
+
+Rural districts lack Pap smear infrastructure — so the government promotes **VIA (Visual Inspection with Acetic Acid)**.
+
+A community health worker screens **1000 women** with VIA. Results are compared against colposcopy-directed biopsy.
+
+| Test | Sensitivity | Specificity |
+|:-----|:------------|:------------|
+| **VIA** | 80% | 85% |
+| **Pap Smear** | 60% | 95% |
+
+*"VIA is more sensitive — isn't it the better test?"*
+
+**It depends on what you need the test to do.**
+:::
+
+::: {.column width="45%"}
+```{r}
+#| fig-height: 5
+#| fig-width: 5.5
+
+tibble(
+  test = c("VIA", "Pap Smear"),
+  sensitivity = c(80, 60),
+  specificity = c(85, 95)
+) %>%
+  pivot_longer(-test, names_to = "metric", values_to = "value") %>%
+  ggplot(aes(x = metric, y = value, fill = test)) +
+  geom_col(position = "dodge", width = 0.6) +
+  geom_text(aes(label = paste0(value, "%")),
+            position = position_dodge(width = 0.6),
+            vjust = -0.5, fontface = "bold", size = 5) +
+  scale_fill_manual(values = c("VIA" = "#e74c3c", "Pap Smear" = "#2980b9")) +
+  scale_y_continuous(limits = c(0, 110)) +
+  labs(title = "VIA vs Pap Smear: The Trade-Off",
+       y = "%", x = NULL, fill = NULL) +
+  theme_minimal(base_size = 14) +
+  theme(plot.title = element_text(face = "bold"),
+        legend.position = "bottom")
+```
+:::
+:::
+
+## The 2×2 Contingency Table {.smaller}
+
+**Standard layout:** Index test in rows, gold standard in columns.
+
+```{r}
+#| fig-height: 4.5
+#| fig-width: 9
+
+cells <- tibble(
+  x = c(1, 2, 1, 2),
+  y = c(2, 2, 1, 1),
+  label = c("True Positive\n(TP)", "False Positive\n(FP)",
+            "False Negative\n(FN)", "True Negative\n(TN)"),
+  fill = c("#27ae60", "#e74c3c", "#f39c12", "#3498db"),
+  count = c(tp_via, fp_via, fn_via, tn_via)
+)
+
+ggplot(cells) +
+  geom_tile(aes(x = x, y = y, fill = fill), width = 0.95, height = 0.95, alpha = 0.85) +
+  geom_text(aes(x = x, y = y + 0.15, label = label), colour = "white",
+            fontface = "bold", size = 5) +
+  geom_text(aes(x = x, y = y - 0.2, label = paste0("n = ", count)),
+            colour = "white", size = 5) +
+  scale_fill_identity() +
+  annotate("text", x = 1, y = 2.6, label = "Disease\nPresent", fontface = "bold", size = 4.5) +
+  annotate("text", x = 2, y = 2.6, label = "Disease\nAbsent", fontface = "bold", size = 4.5) +
+  annotate("text", x = 0.35, y = 2, label = "Test +", fontface = "bold", size = 5) +
+  annotate("text", x = 0.35, y = 1, label = "Test −", fontface = "bold", size = 5) +
+  coord_cartesian(xlim = c(0, 2.7), ylim = c(0.4, 2.8)) +
+  labs(title = "2×2 Table: VIA Screening (n = 1000, Prevalence = 5%)",
+       subtitle = "Index test in ROWS, Gold standard in COLUMNS — FP is top-right") +
+  theme_void(base_size = 12) +
+  theme(plot.title = element_text(face = "bold", hjust = 0.5, size = 14),
+        plot.subtitle = element_text(hjust = 0.5, colour = "#e74c3c", size = 11))
+```
+
+::: {.callout-warning}
+## Convention Alert
+**FP is in the top-right corner** (test +, disease −). Most textbooks, NEET PG, and USMLE follow this layout.
+:::
+
+## VIA Screening: 1000 Women Icon Array
+
+```{r}
+#| fig-height: 5.5
+#| fig-width: 11
+
+icon_data <- tibble(
+  id = 1:total_n,
+  category = c(
+    rep("True Positive", tp_via),
+    rep("False Negative", fn_via),
+    rep("False Positive", fp_via),
+    rep("True Negative", tn_via)
+  )
+) %>%
+  mutate(
+    row = ((id - 1) %% 20) + 1,
+    col = ((id - 1) %/% 20) + 1,
+    category = factor(category,
+                      levels = c("True Positive", "False Negative",
+                                 "False Positive", "True Negative"))
+  )
+
+icon_colours <- c("True Positive" = "#27ae60", "False Negative" = "#e74c3c",
+                   "False Positive" = "#f39c12", "True Negative" = "#bdc3c7")
+
+ggplot(icon_data, aes(x = col, y = row, fill = category)) +
+  geom_tile(colour = "white", linewidth = 0.3) +
+  scale_fill_manual(values = icon_colours, name = "Result") +
+  coord_fixed() +
+  labs(
+    title = "VIA Screening: 1000 Women in Rural MP (Prevalence = 5%)",
+    subtitle = paste0("TP = ", tp_via, " | FN = ", fn_via,
+                      " | FP = ", fp_via, " | TN = ", tn_via,
+                      "  —  Notice the large orange FP cluster")
+  ) +
+  theme_void(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold", size = 13, hjust = 0.5),
+    plot.subtitle = element_text(size = 11, hjust = 0.5, colour = "grey40"),
+    legend.position = "bottom"
+  )
+```
+
+## Sensitivity and Specificity {.smaller}
+
+::: {.columns}
+::: {.column width="50%"}
+**Sensitivity (True Positive Rate)**
+
+$$\text{Sens} = \frac{TP}{TP + FN}$$
+
+*"Of patients WITH disease, how many test positive?"*
+
+. . .
+
+**VIA:** $\frac{40}{50} = 80\%$
+
+**Pap:** $\frac{30}{50} = 60\%$
+
+. . .
+
+**Use:** Screening — **don't miss cases**
+
+Mnemonic: **SnNOut** — Sensitive test, Negative result, rules **Out**
+:::
+
+::: {.column width="50%"}
+**Specificity (True Negative Rate)**
+
+$$\text{Spec} = \frac{TN}{FP + TN}$$
+
+*"Of patients WITHOUT disease, how many test negative?"*
+
+. . .
+
+**VIA:** $\frac{808}{950} = 85\%$
+
+**Pap:** $\frac{902}{950} = 95\%$
+
+. . .
+
+**Use:** Confirmation — **don't overdiagnose**
+
+Mnemonic: **SpPIn** — Specific test, Positive result, rules **In**
+:::
+:::
+
+## VIA vs Pap: The Sensitivity-Specificity Trade-Off
+
+```{r}
+#| fig-height: 5
+#| fig-width: 10
+
+comparison_key <- tibble(
+  test = rep(c("VIA\n(Sens 80%, Spec 85%)", "Pap Smear\n(Sens 60%, Spec 95%)"), each = 3),
+  metric = rep(c("True Positive\n(Detected)", "False Negative\n(Missed)",
+                 "False Positive\n(False alarm)"), 2),
+  count = c(tp_via, fn_via, fp_via, tp_pap, fn_pap, fp_pap),
+  fill = rep(c("#27ae60", "#e74c3c", "#f39c12"), 2)
+)
+
+ggplot(comparison_key, aes(x = metric, y = count, fill = fill)) +
+  geom_col(width = 0.6) +
+  geom_text(aes(label = count), vjust = -0.5, fontface = "bold", size = 5) +
+  scale_fill_identity() +
+  facet_wrap(~ test) +
+  scale_y_continuous(limits = c(0, 180)) +
+  labs(
+    title = "VIA vs Pap: Fewer Missed Cases or Fewer False Alarms?",
+    subtitle = "VIA: 10 missed, 142 false alarms. Pap: 20 missed, 48 false alarms.",
+    x = NULL, y = "Number of Women (out of 1000)"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(plot.title = element_text(face = "bold"),
+        strip.text = element_text(face = "bold", size = 11),
+        axis.text.x = element_text(size = 9, lineheight = 1.0))
+```
+
+## Predictive Values: What Clinicians Actually Need
+
+::: {.columns}
+::: {.column width="50%"}
+**Positive Predictive Value**
+
+$$PPV = \frac{TP}{TP + FP}$$
+
+*"If test positive, what's the chance of disease?"*
+
+. . .
+
+**VIA PPV** = $\frac{40}{40 + 142}$ = **22%**
+
+**Pap PPV** = $\frac{30}{30 + 48}$ = **38%**
+
+At 5% prevalence, **78% of VIA positives are false alarms!**
+:::
+
+::: {.column width="50%"}
+**Negative Predictive Value**
+
+$$NPV = \frac{TN}{FN + TN}$$
+
+*"If test negative, what's the chance of no disease?"*
+
+. . .
+
+**VIA NPV** = $\frac{808}{10 + 808}$ = **98.8%**
+
+**Pap NPV** = $\frac{902}{20 + 902}$ = **97.8%**
+
+Both excellent for ruling out.
+:::
+:::
+
+. . .
+
+::: {.callout-important}
+## The Key Insight
+**Sensitivity and specificity are test properties.** PPV and NPV depend on **prevalence** — the same test behaves differently in different populations!
+:::
+
+## The Prevalence Effect: VIA vs Pap
+
+```{r}
+#| fig-height: 5
+#| fig-width: 10
+
+prev_range <- seq(0.005, 0.40, by = 0.005)
+
+ppv_via_curve <- sapply(prev_range, function(p) {
+  tp <- p * sens_via; fp <- (1-p) * (1-spec_via); tp / (tp + fp)
+})
+ppv_pap_curve <- sapply(prev_range, function(p) {
+  tp <- p * sens_pap; fp <- (1-p) * (1-spec_pap); tp / (tp + fp)
+})
+
+ppv_curves <- tibble(
+  prevalence = rep(prev_range * 100, 2),
+  ppv = c(ppv_via_curve * 100, ppv_pap_curve * 100),
+  test = rep(c("VIA (Sens=80%, Spec=85%)", "Pap (Sens=60%, Spec=95%)"),
+             each = length(prev_range))
+)
+
+key_pts <- tibble(
+  prevalence = c(2, 5, 15, 30),
+  ppv_via = sapply(c(0.02, 0.05, 0.15, 0.30), function(p) {
+    tp <- p*sens_via; fp <- (1-p)*(1-spec_via); tp/(tp+fp)*100 }),
+  label = c("Population\nscreening", "District\nhospital",
+            "Colposcopy\nclinic", "Symptomatic\nreferral")
+)
+
+ggplot(ppv_curves, aes(x = prevalence, y = ppv, colour = test)) +
+  geom_line(linewidth = 1.3) +
+  geom_point(data = key_pts, aes(x = prevalence, y = ppv_via),
+             colour = "#2c3e50", size = 3, inherit.aes = FALSE) +
+  geom_text(data = key_pts, aes(x = prevalence, y = ppv_via + 6, label = label),
+            colour = "#2c3e50", size = 3, fontface = "bold",
+            inherit.aes = FALSE, lineheight = 0.9) +
+  scale_colour_manual(values = c("VIA (Sens=80%, Spec=85%)" = "#e74c3c",
+                                  "Pap (Sens=60%, Spec=95%)" = "#2980b9")) +
+  scale_y_continuous(limits = c(0, 100), labels = function(y) paste0(y, "%")) +
+  scale_x_continuous(labels = function(x) paste0(x, "%")) +
+  labs(title = "PPV vs Prevalence: VIA vs Pap Smear",
+       subtitle = "Pap's higher specificity gives it a PPV advantage at low prevalence. VIA catches up at higher prevalence.",
+       x = "CIN2+ Prevalence (%)", y = "PPV (%)", colour = NULL) +
+  theme_minimal(base_size = 13) +
+  theme(plot.title = element_text(face = "bold"), legend.position = "bottom")
+```
+
+## Likelihood Ratios: Prevalence-Independent {.smaller}
+
+::: {.columns}
+::: {.column width="50%"}
+$$LR^+ = \frac{\text{Sensitivity}}{1 - \text{Specificity}}$$
+
+$$LR^- = \frac{1 - \text{Sensitivity}}{\text{Specificity}}$$
+
+| Test | LR+ | LR− |
+|:-----|:----|:----|
+| **VIA** | 5.3 | 0.24 |
+| **Pap** | 12.0 | 0.42 |
+:::
+
+::: {.column width="50%"}
+| LR+ Value | Interpretation |
+|:----------|:---------------|
+| > 10 | Strong rule-in |
+| 5 – 10 | Moderate rule-in |
+| 2 – 5 | Weak evidence |
+
+| LR− Value | Interpretation |
+|:----------|:---------------|
+| < 0.1 | Strong rule-out |
+| 0.1 – 0.2 | Moderate rule-out |
+| 0.2 – 0.5 | Weak evidence |
+:::
+:::
+
+. . .
+
+**Key insight:** Pap+ is more convincing (LR+ = 12 → strong rule-in), but VIA− is more reassuring (LR− = 0.24 < 0.42).
+
+This **quantifies SnNOut / SpPIn** precisely.
+
+## Fagan Nomogram: VIA vs Pap
+
+```{r}
+#| fig-height: 5.5
+#| fig-width: 10
+
+pre_test <- seq(0.01, 0.99, by = 0.01)
+
+fagan_df <- tibble(
+  pre = rep(pre_test * 100, 4),
+  post = c(
+    calc_post(pre_test, lr_pos_via) * 100,
+    calc_post(pre_test, lr_neg_via) * 100,
+    calc_post(pre_test, lr_pos_pap) * 100,
+    calc_post(pre_test, lr_neg_pap) * 100
+  ),
+  result = rep(c("VIA Positive (LR+ = 5.3)", "VIA Negative (LR− = 0.24)",
+                  "Pap Positive (LR+ = 12)", "Pap Negative (LR− = 0.42)"),
+               each = length(pre_test))
+)
+
+scenarios <- tibble(
+  test = c("VIA+", "VIA−", "Pap+", "Pap−"),
+  pre = 5,
+  post = c(
+    calc_post(0.05, lr_pos_via) * 100,
+    calc_post(0.05, lr_neg_via) * 100,
+    calc_post(0.05, lr_pos_pap) * 100,
+    calc_post(0.05, lr_neg_pap) * 100
+  )
+)
+
+ggplot(fagan_df, aes(x = pre, y = post, colour = result)) +
+  geom_line(linewidth = 1.1) +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed",
+              colour = "grey60", linewidth = 0.7) +
+  geom_point(data = scenarios, aes(x = pre, y = post),
+             size = 4, inherit.aes = FALSE, colour = "#2c3e50") +
+  geom_text(data = scenarios,
+            aes(x = pre + 4, y = post,
+                label = paste0(test, " → ", round(post, 1), "%")),
+            size = 3.5, fontface = "bold", inherit.aes = FALSE, colour = "#2c3e50") +
+  scale_colour_manual(values = c(
+    "VIA Positive (LR+ = 5.3)" = "#e74c3c",
+    "VIA Negative (LR− = 0.24)" = "#3498db",
+    "Pap Positive (LR+ = 12)" = "#c0392b",
+    "Pap Negative (LR− = 0.42)" = "#2471a3"
+  )) +
+  scale_x_continuous(labels = function(x) paste0(x, "%")) +
+  scale_y_continuous(labels = function(y) paste0(y, "%")) +
+  labs(
+    title = "Fagan Nomogram: Pre-Test → Post-Test Probability",
+    subtitle = "At 5% pre-test: Pap+ shifts to 39% (strong), VIA+ only to 22% (moderate). VIA− drops to 1.2% (good rule-out).",
+    x = "Pre-test Probability", y = "Post-test Probability", colour = NULL
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(plot.title = element_text(face = "bold"), legend.position = "bottom")
+```
+
+## ROC Curves: Fasting Glucose for Diabetes {.smaller}
+
+```{r}
+#| fig-height: 5.5
+#| fig-width: 11
+
+set.seed(42)
+n_diabetic <- 300; n_healthy_dm <- 2700
+glucose_diabetic <- rnorm(n_diabetic, mean = 145, sd = 35)
+glucose_healthy <- rnorm(n_healthy_dm, mean = 90, sd = 15)
+
+dist_df <- tibble(
+  glucose = c(glucose_diabetic, glucose_healthy),
+  status = c(rep("Diabetic", n_diabetic), rep("Non-Diabetic", n_healthy_dm))
+)
+
+p_dist <- ggplot(dist_df, aes(x = glucose, fill = status)) +
+  geom_density(alpha = 0.5, colour = NA) +
+  geom_vline(xintercept = c(100, 126), linetype = c("dashed", "solid"),
+             colour = c("#f39c12", "#e74c3c"), linewidth = 0.8) +
+  annotate("text", x = 100, y = 0.025, label = "IFG\n(100)",
+           size = 3, fontface = "bold", colour = "#f39c12") +
+  annotate("text", x = 126, y = 0.025, label = "DM\n(126)",
+           size = 3, fontface = "bold", colour = "#e74c3c") +
+  scale_fill_manual(values = c("Diabetic" = "#e74c3c", "Non-Diabetic" = "#3498db")) +
+  labs(title = "Glucose Distributions", x = "Fasting Glucose (mg/dL)",
+       y = "Density", fill = NULL) +
+  theme_minimal(base_size = 11) +
+  theme(legend.position = "bottom", plot.title = element_text(face = "bold"))
+
+cutoffs_dm <- seq(60, 220, by = 2)
+roc_data <- lapply(cutoffs_dm, function(c) {
+  tpr <- sum(glucose_diabetic >= c) / n_diabetic
+  fpr <- sum(glucose_healthy >= c) / n_healthy_dm
+  tibble(cutoff = c, tpr = tpr, fpr = fpr)
+}) %>% bind_rows() %>% arrange(fpr)
+
+auc_val <- sum(diff(roc_data$fpr) *
+               (roc_data$tpr[-1] + roc_data$tpr[-nrow(roc_data)]) / 2)
+
+cut_100 <- roc_data[which.min(abs(roc_data$cutoff - 100)), ]
+cut_126 <- roc_data[which.min(abs(roc_data$cutoff - 126)), ]
+
+p_roc <- ggplot(roc_data, aes(x = fpr, y = tpr)) +
+  geom_path(colour = "#2c3e50", linewidth = 1.2) +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed",
+              colour = "grey60", linewidth = 0.7) +
+  geom_point(data = cut_100, colour = "#f39c12", size = 5) +
+  geom_point(data = cut_126, colour = "#e74c3c", size = 5) +
+  annotate("text", x = cut_100$fpr + 0.06, y = cut_100$tpr,
+           label = paste0("Cutoff 100\nSens=", round(cut_100$tpr*100),
+                          "% Spec=", round((1-cut_100$fpr)*100), "%"),
+           size = 3, fontface = "bold", colour = "#f39c12") +
+  annotate("text", x = cut_126$fpr + 0.06, y = cut_126$tpr - 0.05,
+           label = paste0("Cutoff 126\nSens=", round(cut_126$tpr*100),
+                          "% Spec=", round((1-cut_126$fpr)*100), "%"),
+           size = 3, fontface = "bold", colour = "#e74c3c") +
+  annotate("text", x = 0.55, y = 0.25,
+           label = paste0("AUC = ", round(auc_val, 3)),
+           size = 5, fontface = "bold", colour = "#2c3e50") +
+  scale_x_continuous(labels = percent_format(accuracy = 1)) +
+  scale_y_continuous(labels = percent_format(accuracy = 1)) +
+  labs(title = "ROC Curve: Fasting Glucose",
+       x = "FPR (1 − Specificity)", y = "TPR (Sensitivity)") +
+  theme_minimal(base_size = 11) +
+  theme(plot.title = element_text(face = "bold"), aspect.ratio = 1)
+
+p_dist + p_roc + plot_layout(widths = c(1, 1.2))
+```
+
+## AUC: Summarising Test Discrimination
+
+| AUC Range | Discrimination | Clinical Analogy |
+|:----------|:---------------|:-----------------|
+| 0.90 – 1.00 | **Excellent** | Troponin for MI |
+| 0.80 – 0.90 | Good | GeneXpert for TB |
+| 0.70 – 0.80 | Fair | CRP for infection |
+| 0.60 – 0.70 | Poor | ESR for inflammation |
+| 0.50 | None | Coin flip |
+
+. . .
+
+::: {.callout-tip}
+## Practical Meaning
+AUC = 0.87 means: pick one random diabetic and one random non-diabetic — there's an **87% chance** the diabetic has a higher fasting glucose.
+:::
+
+## Comparing Tests: HbA1c vs Random Blood Glucose
+
+```{r}
+#| fig-height: 5
+#| fig-width: 9
+
+set.seed(42)
+hba1c_diabetic <- rnorm(300, mean = 8.5, sd = 1.5)
+hba1c_healthy <- rnorm(2700, mean = 5.5, sd = 0.6)
+rbg_diabetic <- rnorm(300, mean = 200, sd = 60)
+rbg_healthy <- rnorm(2700, mean = 120, sd = 40)
+
+calc_roc <- function(diseased_vals, healthy_vals) {
+  all_vals <- c(diseased_vals, healthy_vals)
+  cutoffs_seq <- seq(min(all_vals) - 5, max(all_vals) + 5,
+                     by = (max(all_vals) - min(all_vals)) / 100)
+  roc <- lapply(cutoffs_seq, function(c) {
+    tpr <- sum(diseased_vals >= c) / length(diseased_vals)
+    fpr <- sum(healthy_vals >= c) / length(healthy_vals)
+    tibble(tpr = tpr, fpr = fpr)
+  }) %>% bind_rows() %>% arrange(fpr)
+  roc_sorted <- roc %>% distinct()
+  auc <- sum(diff(roc_sorted$fpr) *
+    (roc_sorted$tpr[-1] + roc_sorted$tpr[-nrow(roc_sorted)]) / 2)
+  roc$auc <- auc
+  return(roc)
+}
+
+roc_hba1c <- calc_roc(hba1c_diabetic, hba1c_healthy) %>%
+  mutate(test = paste0("HbA1c (AUC = ", round(first(auc), 2), ")"))
+roc_rbg <- calc_roc(rbg_diabetic, rbg_healthy) %>%
+  mutate(test = paste0("Random Blood Glucose (AUC = ", round(first(auc), 2), ")"))
+
+roc_both <- bind_rows(roc_hba1c, roc_rbg)
+
+ggplot(roc_both, aes(x = fpr, y = tpr, colour = test)) +
+  geom_path(linewidth = 1.2) +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed",
+              colour = "grey60", linewidth = 0.7) +
+  scale_colour_manual(values = c("#27ae60", "#e67e22")) +
+  scale_x_continuous(labels = percent_format(accuracy = 1)) +
+  scale_y_continuous(labels = percent_format(accuracy = 1)) +
+  labs(title = "Comparing Tests: HbA1c vs Random Blood Glucose",
+       subtitle = "HbA1c hugs top-left corner → better discrimination",
+       x = "FPR (1 − Specificity)", y = "TPR (Sensitivity)", colour = NULL) +
+  theme_minimal(base_size = 13) +
+  theme(aspect.ratio = 1, legend.position = "bottom",
+        plot.title = element_text(face = "bold"))
+```
+
+## Test Selection: Sensitivity vs Specificity {.smaller}
+
+| Clinical Scenario | Priority | Reason | Indian Example |
+|:------------------|:---------|:-------|:---------------|
+| **Community screening** | HIGH Sensitivity | Don't miss cases | VIA for cervical cancer |
+| **Confirming diagnosis** | HIGH Specificity | Don't overdiagnose | Biopsy after VIA+ |
+| **Ruling out danger** | HIGH Sensitivity | FN = patient sent home | D-dimer for PE |
+| **Low prevalence** | HIGH Specificity | Reduce false positives | HIV screening |
+| **Toxic treatment** | HIGH Specificity | FP → unnecessary harm | Chemo based on biopsy |
+
+. . .
+
+> **SnNOut / SpPIn:** Sensitive Negative rules Out. Specific Positive rules In.
+
+## The Two-Step Strategy: Screen Then Confirm
+
+```{r}
+#| fig-height: 5
+#| fig-width: 10
+
+step_data <- tibble(
+  step = factor(c("Population\n(1000 women)", "VIA Positive\n(Screen)",
+                  "Biopsy Confirmed\n(Diagnose)"),
+                levels = c("Population\n(1000 women)", "VIA Positive\n(Screen)",
+                           "Biopsy Confirmed\n(Diagnose)")),
+  total = c(1000, tp_via + fp_via, tp_via)
+)
+
+ggplot(step_data, aes(x = step, y = total)) +
+  geom_col(fill = c("#3498db", "#f39c12", "#27ae60"), width = 0.6, alpha = 0.85) +
+  geom_text(aes(label = total), vjust = -0.5, fontface = "bold", size = 6) +
+  geom_text(data = step_data[2, ],
+            aes(x = step, y = total/2,
+                label = paste0("TP=", tp_via, " + FP=", fp_via)),
+            colour = "white", fontface = "bold", size = 4.5) +
+  geom_text(data = step_data[3, ],
+            aes(x = step, y = total/2,
+                label = paste0("TP=", tp_via, "\n(confirmed)")),
+            colour = "white", fontface = "bold", size = 4) +
+  labs(
+    title = "Cervical Cancer Screening: The Funnel Approach",
+    subtitle = paste0("Screen 1000 → VIA+ = ", tp_via + fp_via,
+                      " → Biopsy confirms ", tp_via, " true CIN2+ cases"),
+    x = NULL, y = "Number of Women"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(plot.title = element_text(face = "bold"),
+        axis.text.x = element_text(size = 11, lineheight = 1.0))
+```
+
+## Indian Scenario: TB GeneXpert {.smaller}
+
+::: {.columns}
+::: {.column width="50%"}
+**Setting:** Rural PHC in Bihar, TB prevalence 3%
+
+**Test:** GeneXpert MTB/RIF — Sens 98%, Spec 99%
+
+```{r}
+#| fig-height: 4
+#| fig-width: 5
+
+tibble(
+  category = c("Sensitivity", "Specificity", "PPV\n(3% prev)", "NPV\n(3% prev)"),
+  value = c(98, 99, 75, 99.9),
+  fill = c("#3498db", "#3498db", "#e67e22", "#27ae60")
+) %>%
+  ggplot(aes(x = category, y = value, fill = fill)) +
+  geom_col(width = 0.6) +
+  geom_text(aes(label = paste0(value, "%")), vjust = -0.5, fontface = "bold", size = 5) +
+  scale_fill_identity() +
+  scale_y_continuous(limits = c(0, 115)) +
+  labs(title = "GeneXpert MTB/RIF", y = "%", x = NULL) +
+  theme_minimal(base_size = 13) +
+  theme(plot.title = element_text(face = "bold"))
+```
+:::
+
+::: {.column width="50%"}
+**Why GeneXpert works at low prevalence:**
+
+- **LR+ = 98** — dramatically shifts probability toward TB
+- **PPV = 75%** — useful even at 3% prevalence
+- **NPV = 99.9%** — negative GeneXpert powerfully excludes TB
+- **LR− = 0.02** — near-perfect rule-out
+
+. . .
+
+::: {.callout-tip}
+## The Specificity Secret
+99% specificity means only **10 false positives per 1000** non-diseased patients. Compare to 90% specificity → 100 FPs. **High specificity protects PPV at low prevalence.**
+:::
+:::
+:::
+
+## Indian Scenario: Malaria RDT Across Seasons
+
+```{r}
+#| fig-height: 5
+#| fig-width: 10
+
+mal_sens <- 0.85; mal_spec <- 0.95
+
+seasons <- tibble(
+  season = c("Dry Season\n(2% prev)", "Post-Monsoon\n(10%)",
+             "Monsoon Peak\n(25%)", "Outbreak\n(50%)"),
+  prevalence = c(0.02, 0.10, 0.25, 0.50),
+  ppv = sapply(c(0.02, 0.10, 0.25, 0.50), function(p) {
+    tp <- p * mal_sens; fp <- (1-p) * (1-mal_spec)
+    tp / (tp + fp) * 100
+  }),
+  npv = sapply(c(0.02, 0.10, 0.25, 0.50), function(p) {
+    tn <- (1-p) * mal_spec; fn <- p * (1-mal_sens)
+    tn / (tn + fn) * 100
+  })
+)
+
+seasons_long <- seasons %>%
+  pivot_longer(c(ppv, npv), names_to = "metric", values_to = "value") %>%
+  mutate(metric = ifelse(metric == "ppv", "PPV", "NPV"))
+
+ggplot(seasons_long, aes(x = season, y = value, fill = metric)) +
+  geom_col(position = "dodge", width = 0.6) +
+  geom_text(aes(label = paste0(round(value), "%")),
+            position = position_dodge(width = 0.6),
+            vjust = -0.5, fontface = "bold", size = 4) +
+  scale_fill_manual(values = c("PPV" = "#e74c3c", "NPV" = "#3498db")) +
+  scale_y_continuous(limits = c(0, 110)) +
+  labs(
+    title = "Malaria RDT: Same Test, Different Seasons (Sens=85%, Spec=95%)",
+    subtitle = "PPV swings from 26% to 94%. Dry season positive → confirm with smear. Monsoon positive → treat immediately.",
+    x = NULL, y = "%", fill = NULL
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(plot.title = element_text(face = "bold"), legend.position = "bottom")
+```
+
+## Indian Scenario: VIA "See and Treat" Model
+
+```{r}
+#| fig-height: 5
+#| fig-width: 10
+
+see_treat <- tibble(
+  step = factor(c("Women\nScreened\n(1000)", "VIA\nPositive\n(182)",
+                  "Cryotherapy\nSame Day\n(182)", "Overtreatment\n(142 FP)",
+                  "Cancers\nPrevented\n(~40 TP)"),
+                levels = c("Women\nScreened\n(1000)", "VIA\nPositive\n(182)",
+                  "Cryotherapy\nSame Day\n(182)", "Overtreatment\n(142 FP)",
+                  "Cancers\nPrevented\n(~40 TP)")),
+  count = c(1000, tp_via + fp_via, tp_via + fp_via, fp_via, tp_via),
+  fill = c("#3498db", "#f39c12", "#e67e22", "#e74c3c", "#27ae60")
+)
+
+ggplot(see_treat, aes(x = step, y = count, fill = fill)) +
+  geom_col(width = 0.55) +
+  geom_text(aes(label = count), vjust = -0.5, fontface = "bold", size = 5) +
+  scale_fill_identity() +
+  labs(
+    title = "VIA 'See and Treat': Accept Overtreatment to Prevent Cancer",
+    subtitle = "142 women overtreated (safe cryotherapy) to prevent ~40 cancers. Favourable trade-off in resource-limited settings.",
+    x = NULL, y = "Number of Women"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(plot.title = element_text(face = "bold"),
+        axis.text.x = element_text(size = 9, lineheight = 1.0))
+```
+
+**The programme logic:** In rural India where follow-up is unreliable, VIA + same-day cryotherapy catches **80% of precancers in a single visit**. Test selection depends on **healthcare context**, not just statistics.
+
+## Key Takeaways
+
+1. **2×2 table** — index test in rows, gold standard in columns, **FP in top-right**
+
+2. **Sensitivity & specificity** are test properties; **PPV & NPV** depend on prevalence
+
+3. **Low prevalence destroys PPV** — even good tests produce mostly false positives
+
+4. **Likelihood ratios** are prevalence-independent: LR+ > 10 = strong rule-in, LR− < 0.1 = strong rule-out
+
+5. **ROC curves** show the full sensitivity-specificity trade-off; **AUC** summarises discrimination
+
+6. **Two-step strategy** — screen (high sensitivity) then confirm (high specificity)
+
+7. **Context matters** — VIA was chosen for India not for best PPV, but for the "see and treat" model
+
+## Further Learning
+
+**Videos:**
+
+- [StatQuest: Sensitivity and Specificity](https://www.youtube.com/watch?v=vP06aMoz4v8)
+- [StatQuest: ROC and AUC, Clearly Explained](https://www.youtube.com/watch?v=4jRBRDbJemM)
+- [Zedstatistics: Diagnostic Test Evaluation](https://www.youtube.com/watch?v=Z5TtopYXNuc)
+
+**Textbooks:**
+
+- Sackett DL et al. *Clinical Epidemiology*. 3rd ed. Ch 4 (Diagnosis).
+- Kirkwood BR. *Essential Medical Statistics*. 2nd ed. Ch 36.

@@ -1,0 +1,472 @@
+---
+title: "Categorical Data Analysis"
+subtitle: "Chi-square, Fisher's, and Risk Measures"
+format:
+  revealjs:
+    theme: [default, ../styles-slides.css]
+    embed-resources: true
+    slide-number: true
+    show-slide-number: all
+    chalkboard: false
+    footer: "Biostatistics for Clinicians | Module 10"
+    transition: fade
+    incremental: false
+    code-fold: true
+    fig-align: center
+    width: 1280
+    height: 720
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{r}
+#| label: setup
+#| include: false
+library(tidyverse)
+library(kableExtra)
+library(patchwork)
+library(scales)
+library(vcd)
+set.seed(42)
+
+theme_clean <- function() {
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title = element_text(face = "bold", size = 15),
+    plot.subtitle = element_text(size = 12, color = "gray40"),
+    panel.grid.minor = element_blank(),
+    panel.grid.major = element_line(color = "gray90", linewidth = 0.3),
+    legend.position = "bottom"
+  )
+}
+```
+
+## The Clinical Problem
+
+Monsoon season — a village near Sagar, MP. 200 people attend a wedding feast. Within 48 hours, **80 develop acute gastroenteritis**.
+
+. . .
+
+The district surveillance officer constructs a 2×2 table for biryani exposure:
+
+|  | Ate Biryani | Did Not | Total |
+|--|---|---|---|
+| **Ill** | 65 | 15 | 80 |
+| **Well** | 30 | 50 | 80 |
+| **Total** | 95 | 65 | 160 |
+
+. . .
+
+**Questions:** Is biryani associated with illness? How strong is the association? What's the clinical impact?
+
+## The 2×2 Contingency Table
+
+The fundamental building block of categorical data analysis:
+
+|  | **Disease** | **No Disease** | **Total** |
+|--|---|---|---|
+| **Exposed** | a | b | a + b |
+| **Not Exposed** | c | d | c + d |
+| **Total** | a + c | b + d | N |
+
+. . .
+
+From this single table we can derive:
+
+- **Tests:** Chi-square, Fisher's exact
+- **Association:** RR, OR
+- **Impact:** ARR, NNT, AR, PAR
+
+## Chi-square Test of Independence
+
+**H₀:** Exposure and disease are independent (no association)
+
+**H₁:** Exposure and disease are associated
+
+. . .
+
+**In words:** For each cell, take (Observed − Expected)², divide by Expected, sum across all cells.
+
+$$\chi^2 = \sum \frac{(\text{Observed} - \text{Expected})^2}{\text{Expected}}$$
+
+. . .
+
+For a 2×2 table, the **cross-product shortcut:**
+
+$$\chi^2 = \frac{N(ad - bc)^2}{(a+b)(c+d)(a+c)(b+d)}, \quad df = 1$$
+
+. . .
+
+**Expected frequency:** $E_{ij} = \frac{\text{Row Total} \times \text{Column Total}}{\text{Grand Total}}$
+
+## Worked Example: Biryani Outbreak
+
+```{r}
+#| fig-width: 10
+#| fig-height: 5
+
+a <- 65; b <- 30; c <- 15; d <- 50; N <- 160
+
+E_ab <- (80 * 95) / 160  # expected: ill + biryani
+chi_sq <- (N * (a*d - b*c)^2) / ((a+b) * (c+d) * (a+c) * (b+d))
+p_val <- 1 - pchisq(chi_sq, df = 1)
+
+freq_data <- data.frame(
+  Category = c("Ate, Ill", "Ate, Well", "No, Ill", "No, Well"),
+  Observed = c(65, 30, 15, 50),
+  Expected = c((80*95)/160, (80*95)/160, (80*65)/160, (80*65)/160)
+)
+
+freq_long <- freq_data %>%
+  pivot_longer(cols = c("Observed", "Expected"),
+               names_to = "Type", values_to = "Freq")
+
+ggplot(freq_long, aes(x = Category, y = Freq, fill = Type)) +
+  geom_col(position = "dodge", alpha = 0.8) +
+  geom_text(aes(label = round(Freq, 1)),
+            position = position_dodge(0.9), vjust = -0.3, size = 4) +
+  scale_fill_manual(values = c("Observed" = "#2c3e50", "Expected" = "#bdc3c7")) +
+  labs(title = "Observed vs. Expected Frequencies",
+       subtitle = paste0("χ² = ", round(chi_sq, 2), ", p = ",
+                        format(p_val, digits = 3, scientific = TRUE)),
+       x = "", y = "Frequency") +
+  theme_clean() +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1))
+```
+
+**Reject H₀** — biryani exposure and illness are significantly associated.
+
+## When Chi-square Fails: Fisher's Exact Test
+
+**Use Fisher's exact test when:**
+
+- Any expected cell frequency < 5
+- Total sample size N < 20–30
+- Rare disease or rare exposure
+
+. . .
+
+**Example:** Leptospirosis cluster after flooding in Alappuzha, Kerala (N = 25):
+
+```{r}
+small <- matrix(c(8, 2, 3, 12), nrow = 2, byrow = TRUE)
+dimnames(small) <- list(
+  c("Waded in floodwater", "Did not wade"),
+  c("Leptospirosis", "Healthy")
+)
+ft <- fisher.test(small)
+
+kable(small, format = "html") %>%
+  kable_styling(full_width = FALSE, bootstrap_options = c("bordered"))
+```
+
+Fisher's p = `r round(ft$p.value, 4)`, OR = `r round(ft$estimate, 2)`
+
+## McNemar's Test: Paired Categorical Data
+
+**Same subjects, before–after** → only **discordant pairs** matter
+
+. . .
+
+**Example:** TB knowledge in 100 contacts, Patna — before and after health education
+
+|  | After: Correct | After: Incorrect |
+|--|---|---|
+| **Before: Correct** | 55 | **5** |
+| **Before: Incorrect** | **25** | 15 |
+
+. . .
+
+$$\chi^2_{\text{McNemar}} = \frac{(b - c)^2}{b + c} = \frac{(5 - 25)^2}{30} = 13.33, \quad p < 0.001$$
+
+. . .
+
+Knowledge significantly improved after education. The 55 + 15 concordant pairs are **ignored**.
+
+## Measures of Association: Overview
+
+```{r}
+measures <- tibble(
+  Measure = c("Relative Risk (RR)", "Odds Ratio (OR)",
+              "ARR", "RRR", "NNT", "NNH", "AR", "PAR"),
+  `In Words` = c(
+    "Risk in Exposed ÷ Risk in Unexposed",
+    "Odds in Exposed ÷ Odds in Unexposed",
+    "Risk in Control − Risk in Treatment",
+    "ARR ÷ Risk in Control",
+    "1 ÷ ARR (treat how many to save one?)",
+    "1 ÷ Absolute Risk of Harm",
+    "Risk in Exposed − Risk in Unexposed",
+    "Fraction of population disease due to exposure"
+  ),
+  `Cell Notation` = c("a/(a+b) ÷ c/(c+d)", "ad / bc",
+              "Rc − Rt", "ARR / Rc",
+              "1 / ARR", "1 / ARH",
+              "Re − Ru", "Pe(RR−1) / [Pe(RR−1)+1]"),
+  Use = c("Cohort", "Case-control",
+          "Trials", "Trials",
+          "Clinical", "Safety",
+          "Individual", "Public health")
+)
+
+kable(measures, format = "html") %>%
+  kable_styling(full_width = TRUE, bootstrap_options = c("bordered", "hover")) %>%
+  row_spec(0, bold = TRUE, background = "#1e3a5f", color = "white") %>%
+  column_spec(1, bold = TRUE)
+```
+
+## Relative Risk (RR)
+
+**In words:** Risk of disease in Exposed ÷ Risk of disease in Unexposed
+
+$$RR = \frac{\text{Incidence in Exposed}}{\text{Incidence in Unexposed}} = \frac{a/(a+b)}{c/(c+d)}$$
+
+. . .
+
+**Outbreak example:**
+
+```{r}
+risk_exp   <- a / (a + b)
+risk_unexp <- c / (c + d)
+RR <- risk_exp / risk_unexp
+```
+
+- Risk in exposed (biryani): `r round(risk_exp, 3)` (`r round(risk_exp*100, 1)`%)
+- Risk in unexposed: `r round(risk_unexp, 3)` (`r round(risk_unexp*100, 1)`%)
+- **RR = `r round(RR, 2)`** — biryani eaters were `r round(RR, 1)`× more likely to fall ill
+
+. . .
+
+**Key:** RR can only be calculated from **cohort studies** where you follow exposed and unexposed groups forward.
+
+## Odds Ratio (OR)
+
+**In words:** Odds of disease in Exposed ÷ Odds of disease in Unexposed
+
+$$OR = \frac{\text{Odds in Exposed}}{\text{Odds in Unexposed}} = \frac{ad}{bc} \quad \text{(cross-product ratio)}$$
+
+```{r}
+OR <- (a * d) / (b * c)
+```
+
+- **OR = `r round(OR, 2)`**
+
+. . .
+
+**Why not just use RR?**
+
+In **case-control studies**, you cannot calculate incidence → cannot get RR → must use OR.
+
+. . .
+
+**The critical question:** When does OR ≈ RR?
+
+## OR ≈ RR: The Rare Disease Assumption
+
+$$OR \approx RR \text{ when disease prevalence < 5–10%}$$
+
+```{r}
+#| fig-width: 10
+#| fig-height: 5
+
+prev_range <- seq(0.01, 0.60, by = 0.02)
+rr_val <- 2.5
+or_vals <- rr_val * ((1 - prev_range) / (1 - prev_range * rr_val))
+
+df_or_rr <- data.frame(
+  Prevalence = prev_range * 100,
+  RR = rr_val,
+  OR = or_vals
+) %>%
+  pivot_longer(cols = c("RR", "OR"), names_to = "Measure", values_to = "Value")
+
+ggplot(df_or_rr, aes(x = Prevalence, y = Value, color = Measure,
+                      linetype = Measure)) +
+  geom_line(linewidth = 1.3) +
+  scale_color_manual(values = c("RR" = "#2980b9", "OR" = "#e74c3c")) +
+  annotate("rect", xmin = 0, xmax = 10, ymin = 0, ymax = Inf,
+           alpha = 0.1, fill = "#2ecc71") +
+  annotate("text", x = 5, y = 6, label = "Rare disease\nOR ≈ RR",
+           fontface = "bold", color = "#27ae60", size = 4) +
+  annotate("text", x = 45, y = 6, label = "Common disease\nOR >> RR",
+           fontface = "bold", color = "#e74c3c", size = 4) +
+  labs(title = "OR Diverges from RR as Prevalence Increases",
+       subtitle = "True RR = 2.5 held constant",
+       x = "Disease Prevalence (%)", y = "Measure Value") +
+  theme_clean()
+```
+
+## 95% Confidence Interval for OR
+
+$$OR_{95\%CI} = OR \times e^{\pm\, 1.96 \times SE(\ln OR)}$$
+
+where $SE(\ln OR) = \sqrt{1/a + 1/b + 1/c + 1/d}$
+
+. . .
+
+```{r}
+ln_OR <- log(OR)
+se_ln_OR <- sqrt(1/a + 1/b + 1/c + 1/d)
+or_ci <- exp(ln_OR + c(-1, 1) * 1.96 * se_ln_OR)
+```
+
+**Outbreak result:** OR = `r round(OR, 2)` (95% CI: `r round(or_ci[1], 2)` – `r round(or_ci[2], 2)`)
+
+. . .
+
+**Interpretation rule:**
+
+- CI includes 1.0 → **not significant** (p > 0.05)
+- CI excludes 1.0 → **significant** (p < 0.05)
+
+## ARR, RRR, and NNT
+
+**TB vaccine trial in Varanasi:** Vaccinated 5/500 (1%); Unvaccinated 20/500 (4%)
+
+. . .
+
+**ARR** (how much does treatment lower absolute risk?):
+
+$$ARR = \text{Risk in Control} - \text{Risk in Treatment} = 4\% - 1\% = 3\%$$
+
+. . .
+
+**RRR** (what fraction of baseline risk is removed?):
+
+$$RRR = \frac{ARR}{\text{Risk in Control}} = \frac{3\%}{4\%} = 75\%$$
+
+. . .
+
+**NNT** (how many to treat to prevent one case?):
+
+$$NNT = \frac{1}{ARR} = \frac{1}{0.03} \approx 33$$
+
+. . .
+
+**Clinical meaning:** Vaccinate 33 people to prevent one case of TB.
+
+:::{.callout-warning}
+RRR (75%) sounds impressive; ARR (3%) gives the true clinical picture.
+:::
+
+## NNT and NNH: The Full Picture
+
+```{r}
+#| fig-width: 10
+#| fig-height: 5
+
+nnt_nnh <- tibble(
+  Measure = c("NNT\n(benefit)", "NNH\n(harm)"),
+  Value = c(33, 83),
+  Color = c("#2ecc71", "#e74c3c")
+)
+
+ggplot(nnt_nnh, aes(x = Measure, y = Value, fill = Color)) +
+  geom_col(width = 0.5, alpha = 0.85) +
+  geom_text(aes(label = Value), vjust = -0.5, size = 7, fontface = "bold") +
+  scale_fill_identity() +
+  labs(title = "Benefit vs. Harm: TB Vaccine Trial",
+       subtitle = "NNH/NNT = 2.5 → benefit outweighs harm",
+       y = "Number Needed") +
+  theme_clean() +
+  theme(axis.title.x = element_blank())
+```
+
+**Therapeutic index** = NNH / NNT = 83 / 33 = 2.5 → Benefit outweighs harm → Recommend vaccination
+
+## Attributable Risk (AR) and Population Attributable Risk (PAR)
+
+:::: {.columns}
+::: {.column width="50%"}
+**AR** — excess risk from exposure (individual level)
+
+$$AR = \text{Risk in Exposed} - \text{Risk in Unexposed}$$
+
+*"How much extra disease does the exposure cause?"*
+
+. . .
+
+**Smoking example:**
+
+AR = 8% − 1% = 7%
+
+AR% = 7/8 = **87.5%** of lung cancer in smokers is attributable to smoking
+:::
+
+::: {.column width="50%"}
+**PAR** — population-level impact (depends on both RR *and* exposure prevalence)
+
+$$PAR\% = \frac{P_e(RR - 1)}{P_e(RR - 1) + 1} \times 100$$
+
+*"If we eliminated this exposure, what fraction of ALL disease would disappear?"*
+
+. . .
+
+If 40% smoke, RR = 8:
+
+PAR% = **73.7%** of all lung cancer could be prevented by eliminating smoking
+:::
+::::
+
+## Decision Guide: Choosing the Right Test
+
+```{r}
+guide <- tibble(
+  Scenario = c("2 independent groups, expected freq ≥ 5",
+               "2 independent groups, expected freq < 5",
+               "Paired / before–after",
+               "Cohort study → risk measure",
+               "Case-control study → association measure",
+               "Clinical impact of treatment"),
+  Test = c("Chi-square test",
+           "Fisher's exact test",
+           "McNemar's test",
+           "Relative Risk (RR)",
+           "Odds Ratio (OR)",
+           "ARR, RRR, NNT, NNH")
+)
+
+kable(guide, col.names = c("Scenario", "Test / Measure"),
+      format = "html") %>%
+  kable_styling(full_width = TRUE, bootstrap_options = c("bordered", "hover")) %>%
+  row_spec(0, bold = TRUE, background = "#1e3a5f", color = "white") %>%
+  column_spec(1, bold = TRUE, width = "55%") %>%
+  column_spec(2, bold = TRUE, color = "#2c3e50")
+```
+
+## Common Pitfalls
+
+:::: {.columns}
+::: {.column width="50%"}
+### Avoid
+
+- Chi-square with expected freq < 5
+- Interpreting OR as RR at high prevalence
+- Claiming causation from chi-square alone
+- Forgetting to report 95% CI for OR/RR
+- Confusing ARR (absolute) with RRR (relative)
+:::
+
+::: {.column width="50%"}
+### Remember
+
+- Fisher's exact test for small samples
+- OR ≈ RR only when disease is rare (< 5–10%)
+- McNemar's for paired categorical data
+- NNT = 1/ARR, not 1/RRR
+- CI excluding 1.0 → statistically significant
+:::
+::::
+
+## Key Takeaways
+
+1. **Chi-square** tests association between two categorical variables (check expected freq ≥ 5)
+2. **Fisher's exact** for small samples; **McNemar's** for paired before–after data
+3. **RR** from cohort studies; **OR** from case-control studies
+4. **OR ≈ RR** only when disease is rare (< 5–10% prevalence)
+5. **ARR** gives the true clinical impact; **RRR** can be misleading
+6. **NNT = 1/ARR** — lower is better; compare NNT to NNH for net benefit
+7. **AR** for individual counselling; **PAR** for public health policy
+8. Always report **95% CI** — if it excludes 1.0, the result is significant

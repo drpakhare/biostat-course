@@ -1,0 +1,57 @@
+---
+title: "Lecture Slides"
+subtitle: "Slide Decks for All Modules"
+---
+
+This page hosts the slide decks for each module. Slides are built with [Quarto RevealJS](https://quarto.org/docs/presentations/revealjs/) and can be viewed in any modern browser. Use the arrow keys to navigate, **F** for fullscreen, and **S** for speaker notes.
+
+## Part I: Foundations
+
+| Module | Slides | Chapter |
+|:-------|:-------|:--------|
+| 1. Why Biostatistics Matters | [Open Slides](slides/01-why-biostats-slides.html){target="_blank"} | [Go to Chapter](modules/01-why-biostats.qmd) |
+| 2. Describing Data | [Open Slides](slides/02-descriptive-slides.html){target="_blank"} | [Go to Chapter](modules/02-descriptive.qmd) |
+| 3. Visualizing Clinical Data | [Open Slides](slides/03-visualization-slides.html){target="_blank"} | [Go to Chapter](modules/03-visualization.qmd) |
+
+## Part II: Probability and Diagnosis
+
+| Module | Slides | Chapter |
+|:-------|:-------|:--------|
+| 4. Probability and Clinical Reasoning | [Open Slides](slides/04-probability-slides.html){target="_blank"} | [Go to Chapter](modules/04-probability.qmd) |
+| 5. Diagnostic Test Evaluation | [Open Slides](slides/05-diagnostic-slides.html){target="_blank"} | [Go to Chapter](modules/05-diagnostic-tests.qmd) |
+
+## Part III: Study Design and Inference
+
+| Module | Slides | Chapter |
+|:-------|:-------|:--------|
+| 6. Sampling Methods and Sample Size | [Open Slides](slides/06-sampling-slides.html){target="_blank"} | [Go to Chapter](modules/06-sampling.qmd) |
+| 7. Study Design, Bias, and Confounding | [Open Slides](slides/07-study-design-slides.html){target="_blank"} | [Go to Chapter](modules/07-study-design.qmd) |
+| 8. Statistical Inference | [Open Slides](slides/08-statistical-inference-slides.html){target="_blank"} | [Go to Chapter](modules/08-statistical-inference.qmd) |
+
+## Part IV: Comparing Groups
+
+| Module | Slides | Chapter |
+|:-------|:-------|:--------|
+| 9. Comparing Means | [Open Slides](slides/09-comparing-means-slides.html){target="_blank"} | [Go to Chapter](modules/09-comparing-means.qmd) |
+| 10. Categorical Data Analysis | [Open Slides](slides/10-categorical-data-slides.html){target="_blank"} | [Go to Chapter](modules/10-categorical-data.qmd) |
+| 11. Correlation and Regression | [Open Slides](slides/11-correlation-regression-slides.html){target="_blank"} | [Go to Chapter](modules/11-correlation-regression.qmd) |
+
+## Part V: Advanced Topics
+
+| Module | Slides | Chapter |
+|:-------|:-------|:--------|
+| 12. Survival Analysis | *Coming soon* | [Go to Chapter](modules/12-survival-analysis.qmd) |
+| 13. Meta-Analysis | *Coming soon* | [Go to Chapter](modules/13-meta-analysis.qmd) |
+| 14. Bias and Confounding | *Coming soon* | [Go to Chapter](modules/14-bias-confounding.qmd) |
+| 15. Sample Size Estimation | *Coming soon* | [Go to Chapter](modules/15-sample-size.qmd) |
+
+---
+
+::: {.callout-tip title="Presentation Tips"}
+
+- Press **F** for fullscreen mode
+- Press **S** to open speaker notes
+- Press **O** for slide overview
+- Press **B** to black out the screen
+- Use the **chalkboard** button (bottom-left) to annotate slides during lectures
+:::

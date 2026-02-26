@@ -1,0 +1,78 @@
+---
+title: "Biostatistics for Clinicians"
+subtitle: "An Interactive, Self-Paced Course with Clinical Examples"
+---
+
+::: {style="max-width: 720px; margin: 0 auto; font-size: 1.08em; line-height: 1.7;"}
+
+## Welcome {.unnumbered}
+
+This course is designed for MBBS students at AIIMS Bhopal who want to build a strong, practical understanding of biostatistics — not as an abstract mathematical exercise, but as an essential clinical skill.
+
+Every module begins with a **real clinical scenario** that shows you *why* the concept matters at the bedside. You will then learn the concept through worked examples, visual explanations built with R, and links to the best free video resources available. Each module ends with **interactive MCQs** — you must select your answer and click "Check Answer" before the solution is revealed, just like a real exam.
+
+## How to Use This Course {.unnumbered}
+
+**Self-paced.** Work through the modules in order, or jump to specific topics you need. Each module is designed to be completed in 60–90 minutes.
+
+**Interactive.** Code blocks are included throughout. Click the **Code** button to see the R code that generates each figure. MCQs are interactive — select your answer, check it, and only then see the detailed explanation.
+
+**Practice-oriented.** MCQs at the end of each module are calibrated to competitive exam difficulty. Detailed explanations are provided for every option — not just the correct one.
+
+## Prerequisites {.unnumbered}
+
+No prior statistics or R knowledge is assumed. Basic arithmetic and a willingness to think critically about numbers are all you need.
+
+## Course Structure {.unnumbered}
+
+**Part I: Foundations**
+
+1. [Why Biostatistics Matters](modules/01-why-biostats.qmd)
+2. [Describing Data](modules/02-descriptive.qmd)
+3. [Visualizing Clinical Data](modules/03-visualization.qmd)
+
+**Part II: Probability & Diagnosis**
+
+4. [Probability and Clinical Reasoning](modules/04-probability.qmd)
+5. [Diagnostic Test Evaluation](modules/05-diagnostic-tests.qmd)
+
+**Part III: Study Design & Inference**
+
+6. [Sampling Methods and Sample Size](modules/06-sampling.qmd)
+7. [Study Design, Bias, and Confounding](modules/07-study-design.qmd)
+8. [Statistical Inference — Confidence Intervals and Hypothesis Testing](modules/08-statistical-inference.qmd)
+
+**Part IV: Comparing Groups**
+
+9. [Comparing Groups — t-tests, ANOVA, and Non-parametric Alternatives](modules/09-comparing-means.qmd)
+10. [Categorical Data — Chi-square, Fisher's, and Risk Measures](modules/10-categorical-data.qmd)
+11. [Correlation and Regression](modules/11-correlation-regression.qmd)
+
+**Part V: Advanced Topics**
+
+12. [Survival Analysis Basics](modules/12-survival-analysis.qmd)
+13. [Meta-analysis and Evidence Synthesis](modules/13-meta-analysis.qmd)
+14. [Bayesian Statistics — Basics](modules/14-bayesian.qmd)
+15. [Machine Learning in Medical Sciences](modules/15-machine-learning.qmd)
+
+## Setup (Optional) {.unnumbered}
+
+To run the R code locally, you will need:
+```r
+install.packages(c(
+  "tidyverse", "ggpubr", "survival", "survminer",
+  "meta", "ggdag", "DiagrammeR",
+  "patchwork", "scales", "kableExtra", "waffle",
+  "htmltools"
+))
+```
+
+## About the Authors {.unnumbered}
+
+**Dr. Abhijit Pakhare** and **Dr. Ankur Joshi** are faculty members in the Department of Community & Family Medicine at AIIMS Bhopal. This course reflects their commitment to making biostatistics accessible, practical, and clinically relevant for medical students across India.
+
+---
+
+*This course is open-access and hosted on [GitHub](https://github.com/drpakhare/biostat-course). Found an error or have a suggestion? [Open an issue](https://github.com/drpakhare/biostat-course/issues).*
+
+:::

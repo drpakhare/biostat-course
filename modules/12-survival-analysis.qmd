@@ -1,0 +1,302 @@
+---
+title: "Survival Analysis Basics"
+subtitle: "Time-to-Event Data and Censoring"
+description: "Master Kaplan-Meier curves, log-rank tests, and hazard ratios. Learn to interpret survival data when some patients are lost to follow-up or study ends before all events occur."
+categories: [survival-analysis, kaplan-meier, hazard-ratios, censoring]
+---
+
+```{r}
+#| label: setup
+#| include: false
+library(tidyverse)
+library(kableExtra)
+library(webexercises)
+library(patchwork)
+library(scales)
+```
+
+## Learning Objectives
+
+1. Understand censoring and its implications for analysis
+2. Calculate and interpret Kaplan-Meier survival curves
+3. Compare survival between groups using log-rank test
+4. Interpret hazard ratios and confidence intervals
+5. Construct and interpret forest plots from survival analyses
+6. Assess proportional hazards assumption
+7. Recognize and interpret common survival study designs (disease-free survival, progression-free survival, overall survival)
+8. Critique survival analysis in published clinical trials
+
+---
+
+## Clinical Hook
+
+::: {.clinical-hook}
+**CheckMate 067 Melanoma Trial:** Two immunotherapy arms (nivolumab monotherapy, nivolumab + ipilimumab) vs. ipilimumab monotherapy. The published KM curves show divergence over time: combination therapy superior early, but curves may converge or cross later. How do we summarize this complexity? How does median OS, 3-year OS, and hazard ratio each tell a different story?
+:::
+
+---
+
+## Introduction to Survival Data and Censoring
+
+::: {.objectives-section}
+Explain why survival data differ from continuous outcome data: not all patients experience the event (death, relapse, etc.) during the study. Some are still alive at study end (right-censored). Censoring introduces the core challenge: how do we estimate survival when data are incomplete? Ignoring censored data biases results. Formal analysis accounts for censoring properly.
+
+**Key concepts:**
+- Time-to-event: duration from start (diagnosis, randomization) to event
+- Censoring: patient has not yet experienced event at last contact
+- Right censoring: most common (subject still alive at study end)
+- Left censoring: rare in clinical studies
+- Types of censoring: administrative (study ends), loss to follow-up, competing risk (other cause of death)
+:::
+
+---
+
+## Survival Functions and Survival Curves
+
+::: {.objectives-section}
+The survival function S(t) = probability of surviving beyond time t. For example, S(5 years) = 0.75 means 75% of subjects live at least 5 years. Survival curves decline over time (or stay flat if no events). Curves specific to a population; estimates include uncertainty (confidence bands). Discuss interpretation: what does a "steep" curve mean clinically?
+
+**Visualizing survival:**
+- Y-axis: survival probability (0 to 1)
+- X-axis: time (months, years)
+- Vertical drops: events occur
+- Horizontal segments: no events
+- Step functions, not smooth curves
+:::
+
+---
+
+## Kaplan-Meier Method
+
+::: {.objectives-section}
+The Kaplan-Meier (KM) method estimates survival accounting for censoring. Intuition: at each time point where an event occurs, calculate the probability of surviving that time point given the subject was at risk. Multiply probabilities across all time points to get cumulative survival. Detailed calculation shown for small dataset.
+
+**KM calculation steps:**
+- List all event times in order
+- At each event time, calculate: P(survive this time | at risk) = (n_at_risk - n_events) / n_at_risk
+- Cumulative survival = product of these probabilities
+- Standard error: Greenwood's formula
+- Confidence limits: often using log-log transformation
+:::
+
+---
+
+## Comparing Survival Between Groups: Log-Rank Test
+
+::: {.objectives-section}
+The log-rank test compares two (or more) survival curves. Null hypothesis: survival distributions are identical between groups. Test compares observed vs. expected number of events in each group at each time point. A large test statistic (small p-value) suggests the groups differ. Emphasize: visual inspection + formal test.
+
+**Interpretation:**
+- p < 0.05: survival differs between groups
+- p ≥ 0.05: no significant difference detected (but absence of evidence ≠ evidence of absence)
+- Power to detect differences depends on number of events (not just n subjects)
+- Test assumes proportional hazards
+:::
+
+---
+
+## Hazard and Hazard Ratios
+
+::: {.objectives-section}
+Hazard h(t) = instantaneous rate of event at time t. Hazard ratio (HR) = hazard in treatment group / hazard in control group. Interpretation: "HR = 0.7 means treatment reduces the hazard (risk per unit time) by 30%." HR is fundamental to survival analysis but often misunderstood. Clarify: HR is not the same as relative risk (RR), though they're related.
+
+**Key concepts:**
+- Hazard = conditional probability of event in next time unit
+- HR = 1: no difference between groups
+- HR < 1: treatment group has lower hazard (better survival)
+- HR > 1: treatment group has higher hazard (worse survival)
+- HR assumes proportional hazards over time
+:::
+
+---
+
+## Interpreting Kaplan-Meier Curves
+
+::: {.objectives-section}
+Read and critique KM curves from published papers. Note: median survival (time at which 50% have had event), proportion surviving at specific time points (e.g., 3-year survival), separation of curves (timing and magnitude), confidence bands (uncertainty). Discuss what curves tell us: early vs. late separation, plateau (long-term survivors), and sensitivity to follow-up length.
+
+**Curve interpretation checklist:**
+- What is the event? (death, progression, relapse?)
+- Event-free = subjects with no event at that time
+- Curves separated early? → early treatment effect
+- Curves diverging or crossing? → time-dependent effects, proportional hazards assumption questioned
+- Confidence bands: how wide? (sample size, event count)
+- Follow-up time: median? events occurred in both groups?
+:::
+
+---
+
+## Median Survival and Milestone Survival Rates
+
+::: {.objectives-section}
+Median survival: time at which 50% of subjects have had event. Useful single summary but loses information. Milestone survival (e.g., 1-year, 3-year, 5-year survival rates) complements median, especially if median not reached. Show how different curves (same median but different shapes) can have different milestone rates.
+
+**Reporting survival:**
+- Median survival ± 95% CI (time units)
+- x-year survival rate ± 95% CI (percentage)
+- Hazard ratio with 95% CI
+- Log-rank p-value
+- Number at risk at key time points (table below curve)
+:::
+
+---
+
+## Proportional Hazards Assumption
+
+::: {.objectives-section}
+The log-rank test and Cox regression assume hazards are proportional (HR constant over time). Violations occur if curves cross or diverge markedly. Check: visual inspection of KM curves (should maintain separation pattern), statistical tests (Schoenfeld residuals), and stratified analysis (HR in early vs. late follow-up).
+
+**What if proportional hazards violated?**
+- Consider restricted mean survival time (alternative summary)
+- Stratified analysis (separate HR for subgroups with different proportionality)
+- Time-dependent analyses or competing risks methods
+- Report both early and late HR
+:::
+
+---
+
+## Forest Plots and Meta-Analysis Context
+
+::: {.objectives-section}
+Forest plots summarize hazard ratios across studies or subgroups. Horizontal line = 95% CI for HR, diamond = summary estimate. Line crossing 1.0 indicates CI includes no difference. Used extensively in meta-analyses of survival data. Teach readers to read and interpret forest plots.
+
+**Reading forest plots:**
+- x-axis: usually log scale, with 1.0 (no difference) marked
+- Each row: study or subgroup
+- Line length: width of CI (wider = less precise)
+- Diamond: summary estimate across studies
+- Position relative to 1.0: direction and magnitude of effect
+:::
+
+---
+
+## Cox Proportional Hazards Regression
+
+::: {.objectives-section}
+Extend to multiple predictors (age, stage, treatment). Cox regression models log-hazard as linear function of predictors: log(h(t)) = log(h₀(t)) + β₁x₁ + β₂x₂ + ... Cox model is semi-parametric: doesn't specify baseline hazard h₀(t), only compares hazards between groups. Output: hazard ratios, coefficients, confidence intervals.
+
+**Cox regression in practice:**
+- Adjust for confounders
+- Assess interaction: does treatment effect vary by subgroup?
+- Check proportional hazards
+- Report adjusted HRs with CIs
+:::
+
+---
+
+## Competing Risks and Other Complications
+
+::: {.objectives-section}
+In reality, death is not the only reason to stop follow-up: patients may be lost to follow-up, switch treatments, or die from unrelated causes. Competing risks: if event of interest is recurrence, death from other causes is a competing risk. Standard KM curve overestimates incidence of event of interest. Cumulative incidence curve accounts for competing risks. Introduce concept; details in advanced courses.
+
+**When relevant:**
+- Outcome is disease progression; competing risk is death from other cause
+- Outcome is vaccine-preventable disease; competing risk is due to different cause
+- Outcome is secondary malignancy; competing risk is death from primary cancer
+:::
+
+---
+
+## Disease-Free Survival, Progression-Free Survival, and Overall Survival
+
+::: {.objectives-section}
+Different outcomes in oncology: Overall survival (OS) = time to death from any cause; Disease-free survival (DFS) = time to recurrence or death; Progression-free survival (PFS) = time to progression or death. Each tells different story. PFS typically shows benefit before OS (earlier endpoint); OS is gold standard but requires longer follow-up. Understand trade-offs.
+
+**Choosing the outcome:**
+- OS: most clinically relevant but requires longest follow-up
+- PFS/DFS: shows earlier benefit, may overestimate patient benefit
+- Surrogate endpoints: do they reliably predict OS?
+:::
+
+---
+
+## Critiquing Survival Studies in Literature
+
+::: {.objectives-section}
+Checklist for evaluating published survival studies: clearly defined event, follow-up adequate and complete, censoring mechanism understood and reported, intent-to-treat analysis, curves and number at risk table provided, confidence intervals reported, proportional hazards assumption discussed, and subgroup analyses pre-specified (not data-dredged).
+
+**Critical appraisal questions:**
+- Event well-defined and clinically relevant?
+- Follow-up duration adequate for study question?
+- Censoring due to study end vs. loss to follow-up reported separately?
+- KM curves reported with number at risk?
+- HR reported with 95% CI and p-value?
+- Proportional hazards assessed?
+- Results clinically meaningful (not just statistically significant)?
+:::
+
+---
+
+## Further Learning
+
+::: {.resources-box}
+
+**Books:**
+- David Machin et al., *Survival Analysis: A Practical Statistical Approach* (2nd ed.)
+- Collett D. *Modelling Survival Data in Medical Research* (3rd ed.)
+- Hosmer DW, Lemeshow S, May S. *Applied Survival Analysis* (2nd ed.)
+
+**Videos:**
+- **StatQuest with Josh Starmer** — Kaplan-Meier Curves, Cox Regression
+- **Paul Dickman** — Introduction to Survival Analysis
+- **Kim Hanson** — Survival Analysis Basics
+
+**Papers:**
+- Kaplan EL, Meier P. "Nonparametric estimation from incomplete observations." *J Am Stat Assoc*. 1958.
+- Peto R, et al. "Design and analysis of randomized clinical trials requiring prolonged observation." *Br J Cancer*. 1977.
+
+**Interactive Resources:**
+- [Seeing Theory — Survival Curves](https://seeing-theory.brown.edu/) (search for survival)
+- [ggplot2 survival plots tutorial](https://www.emilhvitfeldt.com/post/ggplot-covid-19/) — Visual example
+
+:::
+
+---
+
+## NEET PG Practice MCQs
+
+::: {.neet-practice}
+*MCQs to be developed:*
+
+Example question structures:
+- Interpreting KM curves: median survival, survival rates at specific times
+- Comparing two KM curves: which group has better survival, interpretation of separation
+- Interpreting log-rank test p-value
+- Calculating or interpreting hazard ratios and confidence intervals
+- Identifying proportional hazards violations from curve appearance
+- Distinguishing censoring types and their implications
+- Interpreting forest plots of HR from multiple studies
+- Understanding difference between OS, DFS, PFS
+- Critiquing published survival analysis (identifying strengths and weaknesses)
+
+*Answers with explanations to be added.*
+:::
+
+---
+
+## Summary
+
+**Key Takeaways:**
+- Survival data have censoring; standard methods don't apply
+- Kaplan-Meier method estimates S(t), accounting for censoring
+- Log-rank test compares survival curves between groups
+- Hazard ratio < 1 indicates treatment reduces hazard (lower risk per unit time)
+- Proportional hazards assumption: HR constant over time (check visually)
+- Report median survival, x-year survival rates, and HR with CIs
+- Event-free = no event at that time point
+- Number at risk table below curve shows how many subjects remain followed
+- Forest plots summarize HRs; line crossing 1.0 means CI includes no difference
+- Overall survival is most clinically meaningful; PFS/DFS show earlier signal
+
+**Next Steps:**
+- Locate a recent oncology trial with published KM curves; interpret median OS and 3-year OS
+- Extract HR and CI from forest plot in a meta-analysis
+- Assess proportional hazards assumption in a published Cox regression
+- Compare KM curves that have same median but different shapes; discuss what's lost/gained
+
+---
+
+## References
+
+::: {#refs}
+:::

@@ -1,0 +1,1012 @@
+---
+title: "Statistical Inference"
+subtitle: "CLT, Confidence Intervals, Hypothesis Testing, and Effect Sizes"
+format:
+  revealjs:
+    theme: [default, ../styles-slides.css]
+    embed-resources: true
+    slide-number: true
+    show-slide-number: all
+    chalkboard: false
+    footer: "Biostatistics for Clinicians | Module 8"
+    transition: fade
+    incremental: false
+    code-fold: true
+    fig-align: center
+    width: 1280
+    height: 720
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{r}
+#| label: setup
+#| include: false
+library(tidyverse)
+library(kableExtra)
+library(patchwork)
+library(scales)
+set.seed(42)
+
+theme_slide <- function() {
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title = element_text(face = "bold", size = 16),
+    plot.subtitle = element_text(size = 12, color = "gray40"),
+    panel.grid.minor = element_blank(),
+    panel.grid.major = element_line(color = "gray90", linewidth = 0.3),
+    axis.text = element_text(size = 11),
+    axis.title = element_text(size = 12, face = "bold"),
+    legend.position = "bottom",
+    legend.title = element_text(face = "bold")
+  )
+}
+```
+
+## Learning Objectives
+
+::: {.incremental}
+1. Explain the **Central Limit Theorem** and why it enables all inference
+2. Calculate and interpret **confidence intervals** for means and proportions
+3. Describe the logic of **hypothesis testing** (proof by contradiction)
+4. Interpret **p-values** correctly and avoid common misconceptions
+5. Distinguish **Type I error (α)**, **Type II error (β)**, and **power (1 − β)**
+6. Separate **statistical significance** from **clinical significance**
+7. Compute and interpret **effect sizes** (Cohen's d)
+8. Recognize the **multiple testing problem** and apply corrections
+:::
+
+## Clinical Hook: When "Significant" Doesn't Mean Important {.smaller}
+
+::: {.columns}
+::: {.column width="55%"}
+**Phase III Antihypertensive Trial (n = 10,000):**
+
+New drug reduced SBP by **2 mmHg** more than standard therapy.
+
+**p = 0.03** → Headlines: *"Significant BP reduction!"*
+
+. . .
+
+**But the clinical reality:**
+
+- MCID for BP = **5–10 mmHg**
+- 2 mmHg is **clinically irrelevant**
+- With n = 10,000, even trivial differences reach p < 0.05
+
+**This module builds inference from the ground up — and teaches you when to trust a "significant" result.**
+:::
+
+::: {.column width="45%"}
+```{r}
+#| fig-height: 5
+#| fig-width: 5.5
+
+tibble(
+  Category = c("Effect\nFound", "MCID\n(Minimum)"),
+  Value = c(2, 5),
+  fill = c("#e74c3c", "#27ae60")
+) %>%
+  ggplot(aes(x = Category, y = Value, fill = fill)) +
+  geom_col(width = 0.6) +
+  scale_fill_identity() +
+  geom_hline(yintercept = 5, linetype = "dashed", color = "#27ae60", linewidth = 1) +
+  annotate("text", x = 1, y = 2.5, label = "2 mmHg\np = 0.03", fontface = "bold", size = 5, color = "white") +
+  annotate("text", x = 2, y = 5.5, label = "5 mmHg\nMinimum to matter", fontface = "bold", size = 4, color = "#27ae60") +
+  annotate("label", x = 1.5, y = 9, label = '"Significant" ≠ Important', size = 5, fontface = "bold",
+           fill = "#fadbd8", color = "#c0392b", label.size = 0.5) +
+  labs(title = "Statistical vs Clinical Significance",
+       y = "SBP Reduction (mmHg)", x = NULL) +
+  ylim(0, 10) +
+  theme_slide() +
+  theme(legend.position = "none")
+```
+:::
+:::
+
+## The Fundamental Problem
+
+You measure haemoglobin in **50 patients** → sample mean = 11.8 g/dL
+
+. . .
+
+But a **different** set of 50 patients → mean = 12.1 g/dL
+
+. . .
+
+And **another** 50 → mean = 11.5 g/dL
+
+. . .
+
+**Key question:** How can ONE sample tell us about the POPULATION?
+
+. . .
+
+**Answer: The Central Limit Theorem (CLT)** — the single most important result in statistics.
+
+## The Central Limit Theorem: Statement {.smaller}
+
+::: {.callout-tip}
+Draw repeated random samples of size **n** from *any* population with mean **μ** and SD **σ**.
+
+As **n** increases, the distribution of sample means ($\bar{x}$) approaches a **normal distribution** with:
+
+$$\text{Mean of } \bar{x} = \mu \qquad \text{SD of } \bar{x} = \frac{\sigma}{\sqrt{n}} \text{ (Standard Error)}$$
+:::
+
+. . .
+
+**Three key insights:**
+
+| Insight | Implication |
+|---------|-------------|
+| Works for **any** population shape | Even skewed data → normal sampling distribution |
+| SE shrinks with **√n** | More data → more precision (but diminishing returns) |
+| "Large enough" ≈ **n ≥ 30** | Depends on skewness; very skewed → need n ≥ 100 |
+
+## CLT in Action: Skewed Data Becomes Normal {.smaller}
+
+```{r}
+#| fig-height: 5.5
+#| fig-width: 11
+
+population <- rgamma(100000, shape = 2, rate = 0.5)
+pop_mean <- mean(population)
+pop_sd <- sd(population)
+
+draw_means <- function(n, reps = 5000) replicate(reps, mean(sample(population, n)))
+
+means_n5 <- draw_means(5)
+means_n30 <- draw_means(30)
+means_n100 <- draw_means(100)
+
+p1 <- ggplot(tibble(x = population[1:5000]), aes(x)) +
+  geom_histogram(aes(y = after_stat(density)), bins = 40, fill = "#e74c3c", alpha = 0.7, color = "white") +
+  geom_vline(xintercept = pop_mean, linetype = "dashed", linewidth = 1) +
+  labs(title = "Population (Skewed)", subtitle = paste0("μ = ", round(pop_mean,1)), x = "Value", y = "Density") +
+  theme_slide() + theme(axis.text.y = element_blank())
+
+p2 <- ggplot(tibble(x = means_n5), aes(x)) +
+  geom_histogram(aes(y = after_stat(density)), bins = 40, fill = "#3498db", alpha = 0.7, color = "white") +
+  stat_function(fun = dnorm, args = list(mean = pop_mean, sd = pop_sd/sqrt(5)), linewidth = 1, linetype = "dashed") +
+  labs(title = "n = 5", subtitle = paste0("SE = ", round(pop_sd/sqrt(5),2)), x = "Sample Mean", y = NULL) +
+  theme_slide() + theme(axis.text.y = element_blank())
+
+p3 <- ggplot(tibble(x = means_n30), aes(x)) +
+  geom_histogram(aes(y = after_stat(density)), bins = 40, fill = "#27ae60", alpha = 0.7, color = "white") +
+  stat_function(fun = dnorm, args = list(mean = pop_mean, sd = pop_sd/sqrt(30)), linewidth = 1, linetype = "dashed") +
+  labs(title = "n = 30", subtitle = paste0("SE = ", round(pop_sd/sqrt(30),2)), x = "Sample Mean", y = NULL) +
+  theme_slide() + theme(axis.text.y = element_blank())
+
+p4 <- ggplot(tibble(x = means_n100), aes(x)) +
+  geom_histogram(aes(y = after_stat(density)), bins = 40, fill = "#8e44ad", alpha = 0.7, color = "white") +
+  stat_function(fun = dnorm, args = list(mean = pop_mean, sd = pop_sd/sqrt(100)), linewidth = 1, linetype = "dashed") +
+  labs(title = "n = 100", subtitle = paste0("SE = ", round(pop_sd/sqrt(100),2)), x = "Sample Mean", y = NULL) +
+  theme_slide() + theme(axis.text.y = element_blank())
+
+p1 + p2 + p3 + p4 + plot_layout(nrow = 1)
+```
+
+**Even heavily skewed hospital-stay data → normal sampling distribution as n increases**
+
+## The Standard Error: Bridge to Inference
+
+$$SE = \frac{\sigma}{\sqrt{n}}$$
+
+```{r}
+#| fig-height: 4
+#| fig-width: 10
+
+n_vals <- seq(5, 500, by = 5)
+se_vals <- pop_sd / sqrt(n_vals)
+
+key_points <- tibble(
+  n = c(10, 30, 100, 200, 400),
+  SE = pop_sd / sqrt(c(10, 30, 100, 200, 400))
+)
+
+tibble(n = n_vals, SE = se_vals) %>%
+  ggplot(aes(x = n, y = SE)) +
+  geom_line(linewidth = 1.2, color = "#2980b9") +
+  geom_point(data = key_points, size = 3, color = "#c0392b") +
+  geom_text(data = key_points, aes(label = paste0("n=", n, "\nSE=", round(SE,2))),
+            vjust = -1, size = 4, color = "#2c3e50") +
+  labs(title = "The √n Law: SE Decreases with Sample Size",
+       subtitle = "To halve SE → need 4× the sample size (diminishing returns)",
+       x = "Sample Size (n)", y = "Standard Error") +
+  theme_slide()
+```
+
+## CLT Connects to Everything
+
+The SE connects the CLT to all inference tools:
+
+| Tool | Formula Pattern | Uses SE? |
+|------|----------------|----------|
+| **Confidence Interval** | Estimate ± critical value × SE | ✅ |
+| **Test Statistic** | (Observed − Expected) / SE | ✅ |
+| **Sample Size** (Module 6) | Manipulate SE for desired precision | ✅ |
+
+. . .
+
+**The CLT is the engine; SE is the transmission; CIs and tests are the wheels.**
+
+## From Point Estimate to Confidence Interval {.smaller}
+
+**Point estimate:** $\bar{x}$ = 9.2 g/dL (how precise is this?)
+
+**Confidence interval:** provides a *range* of plausible values
+
+. . .
+
+$$\text{CI} = \text{Point Estimate} \pm (\text{Critical Value}) \times \text{Standard Error}$$
+
+::: {.columns}
+::: {.column width="50%"}
+**For a mean (σ unknown):**
+
+$$\bar{x} \pm t_{\alpha/2, \, df} \times \frac{s}{\sqrt{n}}$$
+
+- df = n − 1
+- For 95% CI: $t_{0.025}$ ≈ 1.96 when n is large
+:::
+::: {.column width="50%"}
+**For a proportion:**
+
+$$\hat{p} \pm z_{\alpha/2} \times \sqrt{\frac{\hat{p}(1-\hat{p})}{n}}$$
+
+- For 95% CI: $z_{0.025}$ = 1.96
+- Check: np ≥ 5 and n(1−p) ≥ 5
+:::
+:::
+
+## Worked Example: CI for a Mean {.smaller}
+
+**64 newly diagnosed Type 2 DM patients — Mean FBS:**
+
+| Given | Value |
+|-------|-------|
+| $\bar{x}$ | 156 mg/dL |
+| s | 32 mg/dL |
+| n | 64 |
+
+. . .
+
+**Step 1:** SE = 32 / √64 = 32 / 8 = **4 mg/dL**
+
+. . .
+
+**Step 2:** Critical value: $t_{0.025, 63}$ ≈ 2.00
+
+. . .
+
+**Step 3:** CI = 156 ± 2.00 × 4 = 156 ± 8 = **(148, 164) mg/dL**
+
+. . .
+
+**Interpretation:** We are 95% confident that the true mean FBS lies between 148 and 164 mg/dL.
+
+## Worked Example: CI for a Proportion {.smaller}
+
+**400 adults in rural Bhopal; 72 had hypertension (BP ≥ 140/90)**
+
+| Given | Value |
+|-------|-------|
+| $\hat{p}$ | 72/400 = 0.18 (18%) |
+| n | 400 |
+
+. . .
+
+**Step 1:** SE = $\sqrt{0.18 \times 0.82 / 400}$ = $\sqrt{0.000369}$ = **0.0192**
+
+. . .
+
+**Step 2:** CI = 0.18 ± 1.96 × 0.0192 = 0.18 ± 0.038 = **(14.2%, 21.8%)**
+
+. . .
+
+**Check:** np = 72 ≥ 5, n(1−p) = 328 ≥ 5 → normal approximation valid ✅
+
+## What Does "95% Confidence" Actually Mean? {.smaller}
+
+```{r}
+#| fig-height: 5.5
+#| fig-width: 10
+
+true_mean <- 120; true_sd <- 15; n_sim <- 40
+
+set.seed(123)
+ci_data <- tibble(
+  study = 1:100,
+  xbar = replicate(100, mean(rnorm(n_sim, true_mean, true_sd))),
+  se = replicate(100, sd(rnorm(n_sim, true_mean, true_sd)) / sqrt(n_sim))
+) %>%
+  mutate(
+    lo = xbar - qt(0.975, n_sim - 1) * se,
+    hi = xbar + qt(0.975, n_sim - 1) * se,
+    captures = lo <= true_mean & hi >= true_mean
+  )
+
+n_cap <- sum(ci_data$captures)
+
+ggplot(ci_data, aes(x = study, y = xbar, color = captures)) +
+  geom_hline(yintercept = true_mean, linewidth = 1.2, color = "#2c3e50") +
+  geom_point(size = 1.2) +
+  geom_errorbar(aes(ymin = lo, ymax = hi), width = 0, linewidth = 0.4) +
+  scale_color_manual(values = c("TRUE" = "#3498db", "FALSE" = "#e74c3c"),
+                     labels = c("TRUE" = "Captures μ", "FALSE" = "Misses μ"), name = NULL) +
+  annotate("text", x = 50, y = true_mean + 8, label = paste0("True μ = ", true_mean, " mmHg"),
+           fontface = "bold", size = 5, color = "#2c3e50") +
+  annotate("label", x = 85, y = true_mean - 8,
+           label = paste0(n_cap, "/100 CIs capture μ"), fill = "#d6eaf8", size = 4.5, fontface = "bold") +
+  coord_flip() +
+  labs(title = "100 Simulated 95% CIs from the Same Population",
+       x = "Study Number", y = "Systolic BP (mmHg)") +
+  theme_slide() + theme(legend.position = "top")
+```
+
+## CI Interpretation: Right vs Wrong
+
+| | Wrong Interpretation | Why It's Wrong |
+|---|---|---|
+| ❌ | "95% probability the true mean is in this interval" | True mean is fixed — no probability about it |
+| ❌ | "95% of patients fall in this range" | CI is about the mean, not individual values |
+| ❌ | "95% chance a new sample mean falls here" | New sample generates its own CI |
+
+. . .
+
+**✅ Correct:** "If we repeated this study many times, **95% of calculated CIs** would contain the true population mean."
+
+## What Makes a CI Narrower? {.smaller}
+
+```{r}
+#| fig-height: 4.5
+#| fig-width: 11
+
+p_n <- tibble(n = c(10,25,50,100,200,500),
+              width = 2 * qt(0.975, c(10,25,50,100,200,500)-1) * (32/sqrt(c(10,25,50,100,200,500)))) %>%
+  ggplot(aes(x = factor(n), y = width)) +
+  geom_col(fill = "#3498db", alpha = 0.7, width = 0.6) +
+  geom_text(aes(label = round(width,1)), vjust = -0.3, fontface = "bold", size = 4) +
+  labs(title = "↑ Sample Size → Narrower CI", x = "n", y = "CI Width") +
+  theme_slide()
+
+p_sd <- tibble(sd = c(10,20,30,40,50),
+               width = 2 * qt(0.975, 63) * (c(10,20,30,40,50)/sqrt(64))) %>%
+  ggplot(aes(x = factor(sd), y = width)) +
+  geom_col(fill = "#e74c3c", alpha = 0.7, width = 0.6) +
+  geom_text(aes(label = round(width,1)), vjust = -0.3, fontface = "bold", size = 4) +
+  labs(title = "↑ Variability → Wider CI", x = "SD", y = "CI Width") +
+  theme_slide()
+
+p_conf <- tibble(conf = c("80%","90%","95%","99%"),
+                 width = 2 * qnorm(1 - (1 - c(0.80,0.90,0.95,0.99))/2) * (32/sqrt(64))) %>%
+  ggplot(aes(x = conf, y = width)) +
+  geom_col(fill = "#27ae60", alpha = 0.7, width = 0.6) +
+  geom_text(aes(label = round(width,1)), vjust = -0.3, fontface = "bold", size = 4) +
+  labs(title = "↑ Confidence Level → Wider CI", x = "Confidence", y = "CI Width") +
+  theme_slide()
+
+p_n + p_sd + p_conf
+```
+
+## The Logic of Hypothesis Testing
+
+**Mathematical analogy:**
+
+> To prove √2 is irrational → assume it IS rational → derive a contradiction → reject assumption
+
+. . .
+
+**Statistical analogy:**
+
+> To test if a drug works → assume it DOESN'T (H₀) → observe data → if data are very unlikely under H₀ → reject H₀
+
+. . .
+
+**Key:** We never *prove* the drug works; we only ask whether "no effect" is plausible.
+
+## H₀ and H₁: The Two-Hypothesis Framework {.smaller}
+
+```{r}
+#| fig-height: 4.5
+#| fig-width: 10
+
+x <- seq(-4, 5, length.out = 1000)
+h0 <- dnorm(x, 0, 1)
+h1 <- dnorm(x, 2, 1)
+crit <- qnorm(0.95)
+
+df <- tibble(x, h0, h1)
+
+ggplot(df, aes(x = x)) +
+  geom_area(aes(y = h0, fill = "H₀ (No effect)"), alpha = 0.5) +
+  geom_area(aes(y = h1, fill = "H₁ (Real effect)"), alpha = 0.5) +
+  geom_vline(xintercept = crit, linetype = "dashed", color = "red", linewidth = 1) +
+  geom_area(data = df %>% filter(x >= crit), aes(x, y = h0), fill = "#c0392b", alpha = 0.8) +
+  geom_area(data = df %>% filter(x < crit), aes(x, y = h1), fill = "#f39c12", alpha = 0.8) +
+  scale_fill_manual(values = c("H₀ (No effect)" = "#3498db", "H₁ (Real effect)" = "#e74c3c")) +
+  annotate("text", x = crit + 0.5, y = 0.35, label = "Reject H₀", size = 5, fontface = "bold", color = "darkred") +
+  annotate("text", x = -2, y = 0.35, label = "Fail to\nReject H₀", size = 5, fontface = "bold", color = "darkgreen") +
+  labs(title = "Two Overlapping Distributions Under H₀ and H₁",
+       x = "Test Statistic (z)", y = "Density", fill = NULL) +
+  theme_slide() + theme(legend.text = element_text(size = 12))
+```
+
+| | Definition | Example |
+|---|---|---|
+| **H₀** (Null) | No effect / no difference | New drug = standard drug |
+| **H₁** (Alternative) | Effect exists | New drug ≠ (or >) standard drug |
+
+## One-Tailed vs Two-Tailed Tests {.smaller}
+
+```{r}
+#| fig-height: 4
+#| fig-width: 11
+
+x <- seq(-4, 4, length.out = 1000)
+y <- dnorm(x)
+df_t <- tibble(x, y)
+
+p_two <- ggplot(df_t, aes(x, y)) +
+  geom_area(fill = "lightblue", alpha = 0.7) +
+  geom_area(data = df_t %>% filter(x > 1.96), fill = "red", alpha = 0.8) +
+  geom_area(data = df_t %>% filter(x < -1.96), fill = "red", alpha = 0.8) +
+  geom_vline(xintercept = c(-1.96, 1.96), linetype = "dashed", color = "darkred") +
+  labs(title = "Two-Tailed (α = 0.05)", subtitle = "0.025 each tail | z = ±1.96",
+       x = "Test Statistic", y = "Density") +
+  theme_slide() + theme(axis.text.y = element_blank())
+
+p_one <- ggplot(df_t, aes(x, y)) +
+  geom_area(fill = "lightblue", alpha = 0.7) +
+  geom_area(data = df_t %>% filter(x > 1.645), fill = "red", alpha = 0.8) +
+  geom_vline(xintercept = 1.645, linetype = "dashed", color = "darkred") +
+  labs(title = "One-Tailed (α = 0.05)", subtitle = "0.05 in right tail | z = 1.645",
+       x = "Test Statistic", y = "Density") +
+  theme_slide() + theme(axis.text.y = element_blank())
+
+p_two + p_one
+```
+
+**Default: Two-tailed** | Use one-tailed only if direction pre-specified and opposite is irrelevant
+
+## Test Statistics: Common Pattern {.smaller}
+
+$$\text{Test Statistic} = \frac{\text{Observed} - \text{Expected under } H_0}{\text{Standard Error}}$$
+
+| Scenario | Formula | Distribution |
+|----------|---------|-------------|
+| One sample mean | $t = (\bar{x} - \mu_0) / (s/\sqrt{n})$ | t (n−1 df) |
+| Two independent means | $t = (\bar{x}_1 - \bar{x}_2) / SE_{diff}$ | t (n₁+n₂−2 df) |
+| Paired means | $t = \bar{x}_{diff} / (s_{diff}/\sqrt{n})$ | t (n−1 df) |
+| One proportion | $z = (\hat{p} - p_0) / \sqrt{p_0(1-p_0)/n}$ | Normal (z) |
+| Two proportions | $z = (\hat{p}_1 - \hat{p}_2) / SE_{diff}$ | Normal (z) |
+
+**Always: (signal − expected) / uncertainty**
+
+## What Is a P-Value? {.smaller}
+
+::: {.callout-tip}
+The **p-value** = probability of observing data **as extreme or more extreme** than what we got, **assuming H₀ is true**.
+:::
+
+```{r}
+#| fig-height: 4
+#| fig-width: 10
+
+x <- seq(-4, 4, length.out = 1000)
+y <- dnorm(x)
+obs <- 2.5
+df_p <- tibble(x, y)
+df_shade <- df_p %>% filter(abs(x) >= abs(obs))
+
+ggplot(df_p, aes(x, y)) +
+  geom_area(fill = "lightblue", alpha = 0.7) +
+  geom_area(data = df_shade, fill = "#e74c3c", alpha = 0.8) +
+  geom_vline(xintercept = c(obs, -obs), color = "darkred", linewidth = 1.2) +
+  annotate("label", x = 3.5, y = 0.25,
+           label = "Red area = p-value\n≈ 0.012 (two-tailed)\nIf p < 0.05 → Reject H₀",
+           size = 4, fontface = "bold", fill = "white", color = "darkred") +
+  labs(title = "P-Value Visualized", subtitle = "Area in tails beyond the observed test statistic",
+       x = "Test Statistic", y = "Density") +
+  theme_slide() + theme(axis.text.y = element_blank())
+```
+
+## P-Value Misconceptions {.smaller}
+
+| ❌ Misconception | ✅ Reality |
+|---|---|
+| "p = 0.03 → 3% chance H₀ is true" | P(data this extreme \| H₀ true), not P(H₀ true \| data) |
+| "p = 0.03 → 97% sure result is real" | Replication depends on effect size, design, not p alone |
+| "p = 0.06 → 'trending toward significance'" | Arbitrary! Report exact p-value and effect size |
+| "p = 0.15 → treatment has no effect" | Absence of evidence ≠ evidence of absence |
+| "p = 0.001 → very confident" | Bias doesn't care about your p-value |
+| "Multiple p < 0.05 → strong evidence" | 20 tests → expect ~1 false positive by chance |
+
+. . .
+
+**ASA (2016):** Scientific conclusions require more than p < 0.05. Always report effect sizes and CIs.
+
+## The Four Outcomes of a Hypothesis Test {.smaller}
+
+|  | **Reject H₀** | **Fail to Reject H₀** |
+|---|---|---|
+| **H₀ TRUE** (no effect) | **TYPE I ERROR (α)** ❌ False Positive | ✅ Correct (1 − α) |
+| **H₀ FALSE** (effect exists) | ✅ Correct — **Power (1 − β)** | **TYPE II ERROR (β)** ❌ False Negative |
+
+. . .
+
+**Convention:** α = 0.05, β = 0.20, Power = 0.80
+
+**The 4:1 trade-off:** False positive (adopting useless drug) is considered 4× worse than false negative (missing an effective one).
+
+## Type I Error (α): The False Positive
+
+**Definition:** Concluding an effect exists when it DOESN'T
+
+**Probability:** α (set by researcher, usually 0.05)
+
+. . .
+
+**Dangerous clinical scenarios:**
+
+::: {.incremental}
+- **Approving an ineffective drug** → patients receive it instead of proven therapy
+- **Unnecessary surgery** → thousands undergo biopsies for a spurious biomarker association
+- **Policy changes** → government bans a food additive based on a statistical fluke
+:::
+
+. . .
+
+**What increases Type I risk?** Multiple testing, p-hacking, flexible analysis plans, not pre-registering
+
+## Type II Error (β): The False Negative
+
+**Definition:** Missing a real effect — declaring "no difference" when one exists
+
+**Probability:** β (depends on sample size, effect size, variability)
+
+. . .
+
+**Dangerous clinical scenarios:**
+
+::: {.incremental}
+- **Shelving an effective drug** → immunotherapy that reduces mortality by 15% is abandoned because trial was too small (n = 80)
+- **False equivalence** → concluding two drugs are "the same" with n = 40 per group
+- **Premature stopping** → interim p = 0.08 stops a trial that would have reached p = 0.01
+:::
+
+. . .
+
+**The #1 cause:** Small sample size
+
+## Diagnostic Test Parallel
+
+The concepts map directly to Module 5:
+
+| Hypothesis Testing | Diagnostic Testing |
+|---|---|
+| Type I Error (α) | **False Positive** — healthy person tests positive |
+| Type II Error (β) | **False Negative** — sick person tests negative |
+| Power (1 − β) | **Sensitivity** — correctly detecting disease |
+| Significance level (α) | 1 − Specificity |
+
+. . .
+
+**Power IS sensitivity for hypothesis tests** — the ability to detect a true effect.
+
+## Power: What Determines It? {.smaller}
+
+```{r}
+#| fig-height: 4.5
+#| fig-width: 11
+
+effect_sizes <- seq(0.1, 1.5, by = 0.05)
+power_eff <- sapply(effect_sizes, function(d) pnorm(d * sqrt(64/2) - qnorm(0.975)))
+
+p_eff <- tibble(d = effect_sizes, power = power_eff) %>%
+  ggplot(aes(d, power)) +
+  geom_line(linewidth = 1.2, color = "#3498db") +
+  geom_hline(yintercept = 0.80, linetype = "dashed", color = "#c0392b") +
+  scale_y_continuous(labels = percent_format(), limits = c(0, 1)) +
+  annotate("text", x = 1.3, y = 0.83, label = "80% Power", color = "#c0392b", fontface = "bold") +
+  labs(title = "Power vs Effect Size", subtitle = "n = 64/group, α = 0.05",
+       x = "Cohen's d", y = "Power") +
+  theme_slide()
+
+sample_sizes <- seq(10, 300, by = 5)
+power_n <- sapply(sample_sizes, function(n) pnorm(0.5 * sqrt(n/2) - qnorm(0.975)))
+
+p_ss <- tibble(n = sample_sizes, power = pmin(power_n, 1)) %>%
+  ggplot(aes(n, power)) +
+  geom_line(linewidth = 1.2, color = "#e74c3c") +
+  geom_hline(yintercept = 0.80, linetype = "dashed", color = "darkgreen") +
+  scale_y_continuous(labels = percent_format(), limits = c(0, 1)) +
+  annotate("text", x = 220, y = 0.83, label = "80% Power", color = "darkgreen", fontface = "bold") +
+  labs(title = "Power vs Sample Size", subtitle = "d = 0.5 (medium), α = 0.05",
+       x = "n per group", y = "Power") +
+  theme_slide()
+
+p_eff + p_ss
+```
+
+**↑ Power with: ↑ sample size, ↑ effect size, ↑ α, ↓ variability**
+
+## The α–β Trade-off {.smaller}
+
+```{r}
+#| fig-height: 5.5
+#| fig-width: 11
+
+x <- seq(-4, 6, length.out = 1000)
+
+plot_ab <- function(crit, label) {
+  h0 <- dnorm(x, 0, 1)
+  h1 <- dnorm(x, 2.5, 1)
+  df <- tibble(x, h0, h1)
+
+  alpha_val <- round(1 - pnorm(crit), 3)
+  beta_val <- round(pnorm(crit, mean = 2.5), 3)
+
+  ggplot(df, aes(x)) +
+    geom_line(aes(y = h0), color = "#3498db", linewidth = 1) +
+    geom_line(aes(y = h1), color = "#e74c3c", linewidth = 1) +
+    geom_area(data = df %>% filter(x >= crit), aes(x, y = h0), fill = "#c0392b", alpha = 0.4) +
+    geom_area(data = df %>% filter(x < crit), aes(x, y = h1), fill = "#f39c12", alpha = 0.4) +
+    geom_vline(xintercept = crit, linetype = "dashed", linewidth = 1) +
+    annotate("label", x = -2.5, y = 0.35, label = paste0("α = ", alpha_val),
+             fill = "#fadbd8", color = "#c0392b", fontface = "bold", size = 4) +
+    annotate("label", x = 4.5, y = 0.35, label = paste0("β = ", beta_val, "\nPower = ", round(1-beta_val,3)),
+             fill = "#fdebd0", color = "#e67e22", fontface = "bold", size = 3.5) +
+    labs(title = label, x = NULL, y = NULL) +
+    theme_slide() + theme(axis.text = element_blank())
+}
+
+plot_ab(1.0, "Liberal (α ≈ 0.16)") / plot_ab(1.645, "Standard (α ≈ 0.05)") / plot_ab(2.33, "Stringent (α ≈ 0.01)")
+```
+
+## α–β Trade-off: Key Insight
+
+- **Decrease α** (more stringent) → **β increases** (miss more real effects)
+- You **cannot** minimize both errors simultaneously
+
+. . .
+
+**Solution:** Increase sample size — more data reduces BOTH errors
+
+. . .
+
+| Strategy | α | β | Power | Feasibility |
+|----------|---|---|-------|-------------|
+| Liberal | 0.10 | 0.10 | 90% | ⚠️ More false positives |
+| Standard | 0.05 | 0.20 | 80% | ✅ Most common |
+| Stringent | 0.01 | 0.30 | 70% | ⚠️ Miss real effects |
+| Standard + large n | 0.05 | 0.10 | 90% | ✅ Best but expensive |
+
+## Statistical vs Clinical Significance: The 2×2 Framework {.smaller}
+
+```{r}
+#| fig-height: 5
+#| fig-width: 10
+
+grid_data <- tibble(
+  x = c(1, 2, 1, 2),
+  y = c(2, 2, 1, 1),
+  label = c(
+    "MISSED FINDING\nClinically Important\nBUT Underpowered\n(Need larger trial)",
+    "IDEAL FINDING\nStatistically +\nClinically Significant\n(Change practice!)",
+    "CORRECT NULL\nNeither Significant\n(No effect)",
+    "SPURIOUS FINDING\nStatistically Significant\nBUT Clinically Trivial\n(Don't change practice)"
+  ),
+  color = c("#f39c12", "#27ae60", "#3498db", "#e74c3c")
+)
+
+ggplot(grid_data, aes(x, y)) +
+  geom_tile(aes(fill = color), width = 0.9, height = 0.9, color = "white", linewidth = 2) +
+  scale_fill_identity() +
+  geom_text(aes(label = label), size = 4.5, fontface = "bold", color = "white", lineheight = 1.1) +
+  scale_x_continuous(breaks = c(1, 2), labels = c("Not\nSignificant", "Statistically\nSignificant"), position = "top") +
+  scale_y_continuous(breaks = c(1, 2), labels = c("Not Clinically\nImportant", "Clinically\nImportant")) +
+  labs(title = "Statistical vs Clinical Significance", x = "p-value", y = "Effect Size") +
+  theme_slide() + theme(panel.grid = element_blank(), legend.position = "none",
+                         axis.text = element_text(size = 12, face = "bold"))
+```
+
+## Real-World Examples from Indian Medicine {.smaller}
+
+| Study | Effect | n | p-value | MCID | Verdict |
+|-------|--------|---|---------|------|---------|
+| **Hypertension** | SBP ↓ 2 mmHg | 10,000 | 0.03 | 5–10 mmHg | Stat YES, Clinical **NO** ❌ |
+| **Sepsis** | Mortality ↓ 12% | 200 | 0.001 | ≥ 5% | Stat YES, Clinical **YES** ✅ |
+| **Diabetes** | HbA1c ↓ 0.4% | 150 | 0.12 | 0.5% | Stat NO, Clinical borderline ❓ |
+| **Anticoagulation** | Stroke ↓ 0.5% | 3,000 | 0.001 | ≥ 2% | Stat YES, Clinical **NO** ❌ |
+
+. . .
+
+**Key principle:** A statistically significant result below the MCID is clinically irrelevant — no matter how small the p-value.
+
+## MCID: Minimal Clinically Important Difference
+
+Always define the MCID **before** the trial:
+
+| Outcome | MCID |
+|---------|------|
+| Systolic BP reduction | 5–10 mmHg |
+| HbA1c reduction | 0.5% |
+| Pain (VAS 0–100) | 10–15 points |
+| Mortality reduction | 5% absolute |
+| Quality of life (EQ-5D) | 0.05–0.08 units |
+
+. . .
+
+**Decision rule:** If 95% CI lies entirely above MCID → clinically important.
+If CI straddles MCID → inconclusive. If CI below MCID → not important.
+
+## Effect Size: Why It Matters More Than P-Values {.smaller}
+
+```{r}
+#| fig-height: 5
+#| fig-width: 11
+
+plot_eff <- function(d, title_text) {
+  x <- seq(-4, 4 + d, length.out = 1000)
+  tibble(x, Control = dnorm(x, 0, 1), Treatment = dnorm(x, d, 1)) %>%
+    ggplot(aes(x)) +
+    geom_area(aes(y = Control), fill = "#3498db", alpha = 0.5) +
+    geom_area(aes(y = Treatment), fill = "#e74c3c", alpha = 0.5) +
+    annotate("text", x = -1.5, y = 0.35, label = "Control", size = 4, fontface = "bold", color = "#2471a3") +
+    annotate("text", x = d + 1, y = 0.35, label = "Treatment", size = 4, fontface = "bold", color = "#c0392b") +
+    labs(title = title_text, x = NULL, y = NULL) +
+    theme_slide() + theme(axis.text = element_blank())
+}
+
+plot_eff(0.2, "Small (d = 0.2)") + plot_eff(0.5, "Medium (d = 0.5)") + plot_eff(0.8, "Large (d = 0.8)")
+```
+
+**All three could have p < 0.05 with adequate n — but clinical relevance differs hugely!**
+
+## Cohen's d: Formula and Benchmarks
+
+$$d = \frac{\bar{x}_1 - \bar{x}_2}{s_p} \qquad s_p = \sqrt{\frac{(n_1-1)s_1^2 + (n_2-1)s_2^2}{n_1 + n_2 - 2}}$$
+
+. . .
+
+| Cohen's d | Size | Clinical Example | n needed/group |
+|-----------|------|------------------|----------------|
+| 0.2 | Small | New antacid vs old antacid | ~400 |
+| 0.5 | Medium | Lisinopril for hypertension | ~64 |
+| 0.8 | Large | Penicillin for strep throat | ~25 |
+| > 1.2 | Very large | Insulin for new-onset diabetes | ~12 |
+
+. . .
+
+**Key advantage:** Effect size is **independent of sample size** — p-value is not!
+
+## Worked Example: ACE Inhibitor Trial {.smaller}
+
+**ACE inhibitor vs placebo (n = 50 per group, 8 weeks):**
+
+| Group | SBP Reduction | SD |
+|-------|--------------|-----|
+| Placebo | 5 mmHg | 10 |
+| ACE-I | 12 mmHg | 10 |
+
+. . .
+
+$$s_p = \sqrt{\frac{49 \times 100 + 49 \times 100}{98}} = 10 \qquad d = \frac{12 - 5}{10} = 0.7$$
+
+. . .
+
+| Question | Answer |
+|----------|--------|
+| Statistically significant? | ✅ p < 0.001 |
+| Effect size meaningful? | ✅ d = 0.7 (medium-large) |
+| Clinically important? | ✅ 7 mmHg > MCID of 5 mmHg |
+| **Should we implement?** | **✅ YES** |
+
+## The Multiple Testing Problem {.smaller}
+
+```{r}
+#| fig-height: 4.5
+#| fig-width: 10
+
+k <- seq(1, 50, by = 1)
+prob <- 1 - (1 - 0.05)^k
+
+tibble(k, prob) %>%
+  ggplot(aes(k, prob)) +
+  geom_line(linewidth = 1.2, color = "#e74c3c") +
+  geom_area(alpha = 0.2, fill = "#e74c3c") +
+  geom_vline(xintercept = 20, linetype = "dashed", color = "darkred") +
+  geom_hline(yintercept = 0.05, linetype = "dashed", color = "blue") +
+  scale_y_continuous(labels = percent_format(), limits = c(0, 1)) +
+  annotate("label", x = 35, y = 0.65,
+           label = "At 20 tests:\nP(≥1 false positive) ≈ 64%",
+           fontface = "bold", size = 4.5, fill = "lightyellow") +
+  labs(title = "P(≥1 False Positive) = 1 − (0.95)^k",
+       x = "Number of Tests (k)", y = "P(≥1 False Positive)") +
+  theme_slide()
+```
+
+**Bonferroni correction:** α~corrected~ = α / k (e.g., 10 tests → use α = 0.005)
+
+## P-Hacking: The Dark Side
+
+**What is p-hacking?** Manipulating analysis to achieve p < 0.05:
+
+::: {.incremental}
+1. Test many variables → report only significant ones
+2. Try multiple statistical tests on the same data
+3. Selectively exclude outliers until p < 0.05
+4. Stop data collection when p first crosses 0.05
+5. Report only "interesting" subgroups
+:::
+
+. . .
+
+**Solution:** Pre-register analysis plans (ClinicalTrials.gov, OSF Registries)
+
+## CIs Tell You More Than P-Values {.smaller}
+
+```{r}
+#| fig-height: 4.5
+#| fig-width: 10
+
+studies <- tibble(
+  Study = c("A: Large trial, clear effect", "B: Moderate trial, clear effect",
+            "C: Small trial, significant", "D: Small trial, NOT significant",
+            "E: Large trial, NOT significant"),
+  Effect = c(5, 8, 12, 8, 1),
+  lo = c(2, 5, 1, -3, -1),
+  hi = c(8, 11, 23, 19, 3),
+  Sig = c("Yes","Yes","Yes","No","No")
+)
+
+studies %>%
+  mutate(Study = fct_inorder(Study) %>% fct_rev()) %>%
+  ggplot(aes(Study, Effect, color = Sig)) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red", linewidth = 1) +
+  geom_point(size = 3) +
+  geom_errorbar(aes(ymin = lo, ymax = hi), width = 0.2, linewidth = 1.2) +
+  scale_color_manual(values = c("Yes" = "#27ae60", "No" = "#e74c3c"),
+                     labels = c("Yes" = "p < 0.05", "No" = "p ≥ 0.05"), name = NULL) +
+  coord_flip() +
+  labs(title = "CIs Show Magnitude, Precision, and Significance", x = NULL, y = "Effect Size (mmHg)") +
+  theme_slide() + theme(legend.position = "top")
+```
+
+Study D: wide CI → underpowered (need more data) | Study E: narrow CI → truly no effect
+
+## CI vs P-Value: Summary
+
+| Aspect | P-Value | Confidence Interval |
+|--------|---------|-------------------|
+| Shows effect size? | ❌ No | ✅ Yes |
+| Shows precision? | ❌ Implicit | ✅ Yes |
+| Avoids dichotomy? | ❌ No | ✅ Yes |
+| Assess clinical importance? | ❌ No | ✅ Compare to MCID |
+| Subject to p-hacking? | ⚠️ Very | ✅ Less so |
+
+. . .
+
+**Best practice:** Report **both**. But if forced to choose one → choose the CI.
+
+## Using CIs for Clinical Decisions
+
+**Trial result:** SBP reduced by 6 mmHg (95% CI: 3 to 9, p = 0.001)
+
+**MCID = 5 mmHg**
+
+. . .
+
+- Point estimate (6) > MCID ✅
+- But lower bound (3) < MCID
+
+. . .
+
+**Interpretation:** Effect *likely* clinically meaningful, but we cannot rule out the true effect is below the MCID. Suggestive but not definitive.
+
+**P-value alone** would just say "p = 0.001, significant!" — missing this nuance entirely.
+
+## The Logical Flow of Inference {.smaller}
+
+```{r}
+#| fig-height: 5
+#| fig-width: 11
+
+flow <- tibble(
+  step = c("Central\nLimit\nTheorem", "Standard\nError", "Confidence\nIntervals",
+           "Hypothesis\nTesting", "P-Value", "Type I/II\nErrors",
+           "Effect\nSize", "Clinical vs\nStatistical\nSignificance"),
+  x = c(1, 2, 3, 3, 4, 4, 5, 6),
+  y = c(2, 2, 3, 1, 3, 1, 2, 2),
+  color = c("#2c3e50","#2980b9","#27ae60","#e74c3c","#27ae60","#e74c3c","#8e44ad","#f39c12")
+)
+
+arrows <- tibble(
+  x = c(1, 2, 2, 3, 3, 4, 4, 5),
+  xend = c(2, 3, 3, 4, 4, 5, 5, 6),
+  y = c(2, 2, 2, 3, 1, 3, 1, 2),
+  yend = c(2, 3, 1, 3, 1, 2, 2, 2)
+)
+
+ggplot() +
+  geom_segment(data = arrows, aes(x = x, xend = xend, y = y, yend = yend),
+               arrow = arrow(length = unit(0.2, "cm"), type = "closed"), color = "gray60", linewidth = 0.8) +
+  geom_label(data = flow, aes(x, y, label = step, fill = color),
+             color = "white", fontface = "bold", size = 4, label.padding = unit(0.4, "lines")) +
+  scale_fill_identity() +
+  xlim(0.5, 6.5) + ylim(0, 4) +
+  labs(title = "Each Concept Builds on the Previous") +
+  theme_void() + theme(plot.title = element_text(face = "bold", size = 16, hjust = 0.5))
+```
+
+## Key Takeaways
+
+::: {.incremental}
+1. **CLT** → sample means are normal regardless of population shape (foundation)
+2. **SE = σ/√n** → precision improves with √n (diminishing returns)
+3. **CI** = estimate ± critical value × SE → range of plausible values
+4. **P-value** = P(data this extreme | H₀ true) — NOT P(H₀ true)
+5. **Type I** = false positive (α) | **Type II** = false negative (β)
+6. **Power** = 1 − β ≥ 0.80 before starting any study
+7. **Statistical significance ≠ clinical significance** — always check MCID
+8. **Effect size** (Cohen's d) is independent of n — report it always
+9. **Multiple testing** inflates false positives — correct with Bonferroni
+10. **CIs > p-values** — report both, but CIs tell you more
+:::
+
+## Do's and Don'ts
+
+::: {.columns}
+::: {.column width="50%"}
+**✅ DO:**
+
+- Pre-specify hypotheses
+- Report CIs AND p-values
+- Report effect sizes
+- Power analysis BEFORE study
+- Correct for multiple tests
+- Report ALL tests conducted
+- Consider clinical significance
+:::
+::: {.column width="50%"}
+**❌ DON'T:**
+
+- Interpret p as P(H₀ true)
+- Claim non-significant = no effect
+- Use one-tailed tests to dodge α
+- Stop when p first hits 0.05
+- Test many hypotheses uncorrected
+- Say "trending toward significance"
+- Confuse statistical and clinical significance
+:::
+:::
+
+## Formula Reference Card {.smaller}
+
+| Concept | Formula |
+|---------|---------|
+| **Standard Error (mean)** | $SE = s / \sqrt{n}$ |
+| **95% CI for mean** | $\bar{x} \pm t_{0.025} \times SE$ |
+| **95% CI for proportion** | $\hat{p} \pm 1.96 \sqrt{\hat{p}(1-\hat{p})/n}$ |
+| **Test statistic (general)** | $(Observed - Expected_{H_0}) / SE$ |
+| **Cohen's d** | $(\bar{x}_1 - \bar{x}_2) / s_p$ |
+| **Bonferroni** | $\alpha_{adj} = \alpha / k$ |
+| **Multiple testing P** | $P(\geq 1 \text{ FP}) = 1 - (1-\alpha)^k$ |
+
+. . .
+
+**Remember:** The CLT makes all of this possible.
+
+## Thank You {.center}
+
+**Module 8: Statistical Inference**
+
+*From CLT to CIs to Hypothesis Testing — and knowing when "significant" truly matters*
+
+::: {.callout-tip}
+Next: Module 9 — Comparing Two Groups (t-tests, Mann-Whitney, Chi-Square)
+:::

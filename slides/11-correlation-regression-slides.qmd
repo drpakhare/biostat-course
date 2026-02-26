@@ -1,0 +1,419 @@
+---
+title: "Correlation and Regression"
+subtitle: "From Measuring Association to Predicting Outcomes"
+format:
+  revealjs:
+    theme: [default, ../styles-slides.css]
+    embed-resources: true
+    slide-number: true
+    show-slide-number: all
+    chalkboard: false
+    footer: "Biostatistics for Clinicians | Module 11"
+    transition: fade
+    incremental: false
+    code-fold: true
+    fig-align: center
+    width: 1280
+    height: 720
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{r}
+#| label: setup
+#| include: false
+library(tidyverse)
+library(kableExtra)
+library(patchwork)
+library(scales)
+library(broom)
+set.seed(42)
+
+theme_clean <- function() {
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title = element_text(face = "bold", size = 15),
+    plot.subtitle = element_text(size = 12, color = "gray40"),
+    panel.grid.minor = element_blank(),
+    panel.grid.major = element_line(color = "gray90", linewidth = 0.3),
+    legend.position = "bottom"
+  )
+}
+
+# Generate data
+n <- 200
+age <- round(rnorm(n, mean = 45, sd = 12))
+bmi <- round(rnorm(n, mean = 26, sd = 4.5), 1)
+fbs <- round(80 + 1.8 * bmi + 0.5 * age + rnorm(n, sd = 15))
+health <- data.frame(ID = 1:n, Age = age, BMI = bmi, FBS = fbs,
+                      Sex = sample(c("Male", "Female"), n, replace = TRUE))
+health$diabetes_prob <- plogis(-8 + 0.15 * health$BMI + 0.05 * health$Age)
+health$Diabetes <- rbinom(n, 1, health$diabetes_prob)
+```
+
+## The Clinical Problem
+
+A research team at JIPMER, Puducherry studies 200 adults at a health screening camp.
+
+. . .
+
+**Questions that cascade:**
+
+1. Is higher BMI **associated** with higher FBS? → Correlation
+2. Can we **predict** FBS from BMI? → Linear regression
+3. Does the association **persist** after adjusting for age and sex? → Multiple regression
+4. What if the outcome is diabetes (**yes/no**)? → Logistic regression
+
+## Roadmap
+
+```{r}
+#| fig-width: 11
+#| fig-height: 3
+
+road <- tibble(
+  x = 1:6,
+  label = c("Correlation", "Simple\nRegression", "Assumptions", "Multiple\nRegression",
+            "Logistic\nRegression", "Framework"),
+  fill = c("#2c3e50", "#2c3e50", "#e67e22", "#2980b9", "#8e44ad", "#27ae60")
+)
+
+ggplot(road, aes(x = x, y = 0, label = label, fill = fill)) +
+  geom_tile(width = 0.9, height = 0.5, color = "white", linewidth = 1.5) +
+  geom_text(size = 3.5, fontface = "bold", color = "white") +
+  scale_fill_identity() +
+  coord_fixed(ratio = 1.2) +
+  theme_void()
+```
+
+## What Correlation Measures
+
+**In words:** As one variable goes up, does the other tend to go up, go down, or show no pattern?
+
+. . .
+
+$$r = \frac{\text{Covariance}(x, y)}{SD_x \times SD_y}$$
+
+. . .
+
+| Range | Meaning |
+|-------|---------|
+| r = +1 | Perfect positive linear |
+| r = 0 | No linear association |
+| r = −1 | Perfect negative linear |
+
+. . .
+
+**Two versions:** Pearson (for continuous, linear) and Spearman (for ordinal, or when outliers/skew present)
+
+## BMI vs. FBS: Scatter Plot
+
+```{r}
+#| fig-width: 10
+#| fig-height: 6
+
+r_val <- cor(health$BMI, health$FBS)
+
+ggplot(health, aes(x = BMI, y = FBS)) +
+  geom_point(alpha = 0.5, color = "#2c3e50") +
+  geom_smooth(method = "lm", se = TRUE, color = "#e74c3c", linewidth = 1) +
+  annotate("text", x = 36, y = 85,
+           label = paste0("r = ", round(r_val, 3), "\np < 0.001"),
+           fontface = "bold", color = "#e74c3c", size = 5) +
+  labs(title = "BMI vs. Fasting Blood Sugar",
+       subtitle = "JIPMER Health Camp, n = 200",
+       x = "BMI (kg/m²)", y = "FBS (mg/dL)") +
+  theme_clean()
+```
+
+r = `r round(r_val, 3)` — moderate positive correlation
+
+## Pearson vs. Spearman
+
+| Feature | Pearson (r) | Spearman (rₛ) |
+|---------|------------|---------------|
+| Measures | Linear association | Monotonic association |
+| Data | Continuous, ~normal | Ordinal or skewed |
+| Outlier-sensitive? | Yes | No (uses ranks) |
+| Use when | Scatter looks linear, no extreme outliers | Ranks, ordinal data, non-linear monotonic |
+
+. . .
+
+**Rule of thumb:** If in doubt, compute both. If they agree, report Pearson. If they disagree substantially, investigate the scatter plot for non-linearity or outliers.
+
+## Correlation ≠ Causation
+
+:::: {.columns}
+::: {.column width="50%"}
+**Ice cream sales ↑ and drowning deaths ↑**
+
+r ≈ 0.8 — very strong!
+
+Should we ban ice cream?
+
+. . .
+
+**No.** Lurking variable = **temperature**
+:::
+
+::: {.column width="50%"}
+**Sources of spurious association:**
+
+- Confounding (third variable)
+- Reverse causality (y → x)
+- Selection bias
+- Measurement error
+:::
+::::
+
+. . .
+
+A strong r means variables *move together* — not that one *causes* the other.
+
+## Simple Linear Regression: The Model
+
+**In words:** Predicted outcome = Baseline + (Rate of change × Predictor) + Error
+
+$$y = \beta_0 + \beta_1 x + \varepsilon$$
+
+. . .
+
+- **β₀ (intercept):** Predicted y when x = 0
+- **β₁ (slope):** Change in y for each 1-unit increase in x
+- **ε:** What the model can't explain
+
+. . .
+
+**Least squares** finds β₀ and β₁ that minimise $\sum(y_i - \hat{y}_i)^2$
+
+## Regression: BMI → FBS
+
+```{r}
+#| fig-width: 10
+#| fig-height: 6
+
+model <- lm(FBS ~ BMI, data = health)
+b0 <- coef(model)[1]; b1 <- coef(model)[2]
+r_sq <- summary(model)$r.squared
+
+ggplot(health, aes(x = BMI, y = FBS)) +
+  geom_point(alpha = 0.4, color = "#2c3e50") +
+  geom_smooth(method = "lm", se = TRUE, color = "#e74c3c", fill = "#e74c3c",
+              alpha = 0.15, linewidth = 1) +
+  annotate("text", x = 36, y = 90,
+           label = paste0("FBS = ", round(b0, 1), " + ", round(b1, 1),
+                         " × BMI\nR² = ", round(r_sq, 3)),
+           fontface = "bold", color = "#e74c3c", size = 4.5) +
+  labs(title = "Simple Linear Regression: BMI → FBS",
+       x = "BMI (kg/m²)", y = "FBS (mg/dL)") +
+  theme_clean()
+```
+
+**Slope:** Each 1 kg/m² BMI increase → `r round(b1, 1)` mg/dL higher FBS
+
+## R²: Variance Explained
+
+**In words:** What fraction of the total scatter in y is captured by the regression line?
+
+$$R^2 = 1 - \frac{\sum(y_i - \hat{y}_i)^2}{\sum(y_i - \bar{y})^2}$$
+
+. . .
+
+For simple regression: $R^2 = r^2$
+
+. . .
+
+**Our model:** R² = `r round(r_sq, 3)` → BMI explains `r round(r_sq * 100, 1)`% of FBS variation
+
+. . .
+
+The remaining `r round((1 - r_sq) * 100, 1)`% is due to age, diet, genetics, measurement error, etc.
+
+## Confidence vs. Prediction Interval
+
+```{r}
+#| fig-width: 10
+#| fig-height: 6
+
+new_data <- data.frame(BMI = seq(16, 40, by = 0.5))
+ci <- predict(model, newdata = new_data, interval = "confidence")
+pi <- predict(model, newdata = new_data, interval = "prediction")
+pd <- data.frame(BMI = new_data$BMI, Fit = ci[,1],
+                  CI_lo = ci[,2], CI_hi = ci[,3],
+                  PI_lo = pi[,2], PI_hi = pi[,3])
+
+ggplot() +
+  geom_ribbon(data = pd, aes(x = BMI, ymin = PI_lo, ymax = PI_hi),
+              fill = "#3498db", alpha = 0.15) +
+  geom_ribbon(data = pd, aes(x = BMI, ymin = CI_lo, ymax = CI_hi),
+              fill = "#e74c3c", alpha = 0.25) +
+  geom_line(data = pd, aes(x = BMI, y = Fit), color = "#2c3e50", linewidth = 1) +
+  geom_point(data = health, aes(x = BMI, y = FBS), alpha = 0.3) +
+  annotate("text", x = 37, y = 170, label = "Prediction interval\n(single patient)",
+           color = "#3498db", fontface = "bold", size = 3.5) +
+  annotate("text", x = 37, y = 135, label = "Confidence interval\n(population mean)",
+           color = "#e74c3c", fontface = "bold", size = 3.5) +
+  labs(title = "CI vs. PI: Two Types of Uncertainty",
+       x = "BMI (kg/m²)", y = "FBS (mg/dL)") +
+  theme_clean()
+```
+
+## Regression Assumptions: LINE
+
+1. **L**inearity — scatter plot shows a linear trend
+2. **I**ndependence — observations are independent
+3. **N**ormality — *residuals* (not x!) are approximately normal
+4. **E**qual variance — residual spread is constant (homoscedasticity)
+
+. . .
+
+**Check with diagnostic plots:**
+
+- Residuals vs. Fitted → random cloud (not curved, not funnel)
+- Q-Q plot → points on diagonal
+- Scale-Location → flat trend
+- Cook's distance → no single observation dominates
+
+## What to Do When Assumptions Fail
+
+| Problem | Sign | Fix |
+|---------|------|-----|
+| Non-linear | Curved residuals | Transform x or y; polynomial term |
+| Non-normal residuals | Q-Q deviates at tails | Transform y; often OK if n > 30 |
+| Heteroscedasticity | Fan-shaped residuals | Log-transform y; robust SE |
+| Influential outlier | Cook's distance > 0.5 | Investigate; report with and without |
+
+## Multiple Regression: Adjusting for Confounders
+
+**Question:** Is the BMI–FBS association genuine, or confounded by age?
+
+. . .
+
+$$\text{FBS} = \beta_0 + \beta_1 \times BMI + \beta_2 \times Age + \beta_3 \times Sex + \varepsilon$$
+
+. . .
+
+**In words:** Each coefficient tells you the effect of that variable *while all others are held fixed*.
+
+. . .
+
+```{r}
+model_multi <- lm(FBS ~ BMI + Age + Sex, data = health)
+cs <- tidy(model, conf.int = TRUE)
+cm <- tidy(model_multi, conf.int = TRUE)
+
+comp <- tibble(
+  Model = c("Simple (BMI only)", "Adjusted (+ Age, Sex)"),
+  `BMI slope` = c(round(cs$estimate[2], 2), round(cm$estimate[2], 2)),
+  `95% CI` = c(paste0(round(cs$conf.low[2], 2), " – ", round(cs$conf.high[2], 2)),
+               paste0(round(cm$conf.low[2], 2), " – ", round(cm$conf.high[2], 2))),
+  `Adj R²` = c(round(summary(model)$adj.r.squared, 3),
+               round(summary(model_multi)$adj.r.squared, 3))
+)
+
+kable(comp, format = "html") %>%
+  kable_styling(full_width = FALSE, bootstrap_options = c("bordered"))
+```
+
+If the slope changes after adjustment → **confounding was present**.
+
+## Logistic Regression: Binary Outcomes
+
+When the outcome is **yes/no** (diabetes, death, readmission), linear regression breaks down. Logistic regression models the **log-odds**:
+
+. . .
+
+$$\ln\left(\frac{p}{1-p}\right) = \beta_0 + \beta_1 x$$
+
+. . .
+
+The **odds ratio** for a 1-unit increase in x:
+
+$$OR = e^{\beta_1}$$
+
+. . .
+
+**Connection to Module 10:** The 2×2 table OR is a special case. Logistic regression is the **multivariable extension**.
+
+## Logistic Regression: Predicted Probabilities
+
+```{r}
+#| fig-width: 10
+#| fig-height: 6
+
+logit <- glm(Diabetes ~ BMI + Age + Sex, data = health, family = binomial)
+bmi_seq <- data.frame(BMI = seq(16, 40, by = 0.5), Age = 45, Sex = "Male")
+bmi_seq$prob <- predict(logit, newdata = bmi_seq, type = "response")
+
+ggplot(bmi_seq, aes(x = BMI, y = prob)) +
+  geom_line(color = "#8e44ad", linewidth = 1.3) +
+  geom_rug(data = health %>% filter(Diabetes == 1), aes(x = BMI, y = NULL),
+           sides = "t", alpha = 0.3, color = "#e74c3c") +
+  geom_rug(data = health %>% filter(Diabetes == 0), aes(x = BMI, y = NULL),
+           sides = "b", alpha = 0.3, color = "#2ecc71") +
+  geom_hline(yintercept = 0.5, linetype = "dashed", color = "gray50") +
+  scale_y_continuous(labels = percent_format(), limits = c(0, 1)) +
+  labs(title = "Predicted Probability of Diabetes by BMI",
+       subtitle = "Logistic regression (Age = 45, Male) | Rug = actual cases",
+       x = "BMI (kg/m²)", y = "P(Diabetes)") +
+  theme_clean()
+```
+
+The **sigmoid curve** — probability bounded between 0 and 1
+
+## Decision Framework
+
+```{r}
+decision <- tibble(
+  Scenario = c("Strength of association (two continuous)?",
+               "Ordinal data or outliers?",
+               "Predict continuous outcome (one predictor)?",
+               "Adjust for confounders?",
+               "Predict binary outcome (yes/no)?",
+               "Predict time-to-event?"),
+  Method = c("Pearson r", "Spearman rₛ",
+             "Simple linear regression", "Multiple linear regression",
+             "Logistic regression", "Cox regression (Module 12)")
+)
+
+kable(decision, format = "html") %>%
+  kable_styling(full_width = TRUE, bootstrap_options = c("bordered", "hover")) %>%
+  row_spec(0, bold = TRUE, background = "#1e3a5f", color = "white") %>%
+  column_spec(1, bold = TRUE, width = "55%")
+```
+
+## Common Pitfalls
+
+:::: {.columns}
+::: {.column width="50%"}
+### Avoid
+
+- Assuming correlation proves causation
+- Using linear regression for binary outcomes
+- Ignoring residual plots
+- Extrapolating beyond the data range
+- Reporting only R² without checking assumptions
+:::
+
+::: {.column width="50%"}
+### Remember
+
+- r measures *linear* association only
+- R² = r² for simple regression
+- Adjusted R² for comparing models
+- Logistic regression → OR, not risk ratio
+- Regression adjusts for *measured* confounders only
+:::
+::::
+
+## Key Takeaways
+
+1. **Pearson r** = linear association; **Spearman rₛ** = rank-based alternative
+2. **Correlation ≠ causation** — always consider confounding
+3. **Simple regression:** y = β₀ + β₁x; slope = change per unit; R² = variance explained
+4. **Check LINE assumptions** with diagnostic plots
+5. **CI** for the mean; **PI** for a new individual — always report uncertainty
+6. **Multiple regression** adjusts for confounders; use **adjusted R²**
+7. **Logistic regression** for binary outcomes → coefficients exponentiate to **ORs**
+8. **No regression proves causation** in observational data — only RCTs can

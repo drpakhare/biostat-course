@@ -1,0 +1,15 @@
+{
+  "hash": "6f37f6e8dcb0da74ec4b1b453c60ba7e",
+  "result": {
+    "engine": "knitr",
+    "markdown": "---\ntitle: \"Bayesian Statistics — Basics\"\nsubtitle: \"Updating Beliefs with Evidence\"\ndescription: |\n  An introduction to Bayesian thinking for clinicians: prior distributions,\n  likelihood, posterior distributions, and how Bayesian approaches differ from\n  frequentist methods. Practical applications in clinical decision-making\n  and medical research.\ncategories:\n  - Bayesian Statistics\n  - Clinical Reasoning\n  - Statistical Inference\n---\n\n\n\n::: {.callout-note appearance=\"minimal\"}\n**Lecture slides for this module:** [Open Slides](../slides/14-bayesian-slides.html){target=\"_blank\"}\n:::\n\n## Learning Objectives\n\nBy the end of this module, you will be able to:\n\n1. Explain the **Bayesian framework**: prior, likelihood, and posterior\n2. Distinguish between **frequentist and Bayesian** approaches to inference\n3. Interpret a **posterior distribution** and its credible interval\n4. Understand how **prior choice** affects conclusions\n5. Apply Bayesian thinking to **clinical decision-making** scenarios\n6. Recognize when Bayesian methods offer advantages over frequentist approaches\n7. Interpret Bayesian results in published medical literature\n\n---\n\n:::{.clinical-hook}\n## Coming Soon\n\nThis module is under development. It will build on the Bayesian reasoning introduced in Module 4 (Probability and Clinical Reasoning) and extend it to formal statistical inference.\n\n**Planned content includes:**\n\n- From Bayes' theorem to Bayesian statistics\n- Prior distributions: what you believed before seeing data\n- Likelihood: what the data tell you\n- Posterior distributions: your updated belief\n- Credible intervals vs confidence intervals\n- Bayesian hypothesis testing (Bayes factors)\n- Clinical applications: adaptive trial designs, rare disease inference\n- When Bayesian and frequentist methods agree (and when they don't)\n- Indian clinical examples throughout\n:::\n\n---\n\n## References\n\n::: {#refs}\n:::\n",
+    "supporting": [],
+    "filters": [
+      "rmarkdown/pagebreak.lua"
+    ],
+    "includes": {},
+    "engineDependencies": {},
+    "preserve": {},
+    "postProcess": true
+  }
+}
