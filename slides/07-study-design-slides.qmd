@@ -530,6 +530,141 @@ For each scenario, identify the study design:
 4. *"Randomly assigned 200 diabetics to yoga vs standard care for 6 months"* → **RCT** (random allocation of intervention)
 :::
 
+## The Sweden–India Paradox {.smaller}
+
+::: {.columns}
+::: {.column width="50%"}
+| Country | Crude Death Rate | Life Expectancy |
+|---------|:---:|:---:|
+| India | **6.4** | 70.8 years |
+| Sweden | **9.0** | 83.2 years |
+
+Sweden's crude death rate is **41% higher** — yet Swedes live 12 years longer!
+
+. . .
+
+**Why?** Sweden has 29% of its population aged 60+, vs 18% in India. More elderly = more deaths = higher crude rate.
+
+**Age is confounding the comparison.**
+:::
+
+::: {.column width="50%"}
+```{r}
+#| fig-height: 5
+#| fig-width: 5.5
+age_df <- tibble(
+  age_group = factor(rep(c("0–14", "15–44", "45–59", "60–74", "75+"), 2),
+                     levels = c("0–14", "15–44", "45–59", "60–74", "75+")),
+  country = rep(c("India", "Sweden"), each = 5),
+  pct = c(24.2, 41.4, 16.0, 12.0, 6.4,
+          17.2, 35.3, 18.5, 16.0, 13.0)
+)
+ggplot(age_df, aes(x = age_group, y = pct, fill = country)) +
+  geom_col(position = "dodge", color = "black", linewidth = 0.3) +
+  scale_fill_manual(values = c("India" = "#FF9933", "Sweden" = "#006AA7")) +
+  labs(title = "Population Age Structure", x = NULL, y = "% of Population", fill = NULL) +
+  theme_minimal(base_size = 14) +
+  theme(legend.position = "top")
+```
+:::
+:::
+
+## Direct Standardization {.smaller}
+
+**Question:** What would each country's death rate be if both had the **same** age structure?
+
+**Method:** Apply each country's age-specific rates to a common standard population.
+
+| Age Group | Standard Weight (Wᵢ) | India ASDR (Rᵢ) | Wᵢ × Rᵢ | Sweden ASDR (Rᵢ) | Wᵢ × Rᵢ |
+|---|:---:|:---:|:---:|:---:|:---:|
+| 0–14 | 0.264 | 2.8 | 0.739 | 0.3 | 0.079 |
+| 15–44 | 0.378 | 1.5 | 0.567 | 0.4 | 0.151 |
+| 45–59 | 0.172 | 5.2 | 0.894 | 2.8 | 0.482 |
+| 60–74 | 0.118 | 22.0 | 2.596 | 12.0 | 1.416 |
+| 75+ | 0.068 | 80.0 | 5.440 | 72.0 | 4.896 |
+| **Total (ASR)** | | | **10.24** | | **7.02** |
+
+. . .
+
+**After standardization:** India (10.2) > Sweden (7.0) — the truth emerges!
+
+$$\text{Age-Standardized Rate} = \sum_{i} W_i \times R_i$$
+
+## Kerala vs Bihar: Same Paradox Within India {.smaller}
+
+::: {.columns}
+::: {.column width="50%"}
+| | Kerala | Bihar |
+|---|:---:|:---:|
+| % Population 60+ | **26%** | **13%** |
+| Crude Death Rate | 7.4 | 5.8 |
+| **Age-Standardized Rate** | **5.6** | **8.1** |
+| Life Expectancy | 76.3 yrs | 69.2 yrs |
+
+Kerala's crude rate appears **higher** — but after standardization, Bihar's rate is **45% higher**.
+
+Kerala is healthier at every age. It just has more elderly people (demographic transition).
+:::
+
+::: {.column width="50%"}
+```{r}
+#| fig-height: 5
+#| fig-width: 5.5
+kb_df <- tibble(
+  age_group = factor(rep(c("0–14", "15–44", "45–59", "60–74", "75+"), 2),
+                     levels = c("0–14", "15–44", "45–59", "60–74", "75+")),
+  state = rep(c("Kerala", "Bihar"), each = 5),
+  asdr = c(0.8, 1.0, 4.5, 20.0, 85.0,
+           4.5, 2.2, 7.0, 28.0, 95.0)
+)
+ggplot(kb_df, aes(x = age_group, y = asdr, fill = state)) +
+  geom_col(position = "dodge", color = "black", linewidth = 0.3) +
+  scale_fill_manual(values = c("Kerala" = "#2E86C1", "Bihar" = "#E74C3C")) +
+  labs(title = "Bihar Has Higher ASDR in Every Age Group",
+       x = NULL, y = "Deaths per 1,000", fill = NULL) +
+  theme_minimal(base_size = 14) +
+  theme(legend.position = "top")
+```
+:::
+:::
+
+## Indirect Standardization & SMR {.smaller}
+
+**When to use:** Small populations where age-specific rates are unstable (few deaths per group).
+
+**Method:** Apply the **standard population's** rates to your population's age structure → get **expected** deaths.
+
+$$\text{SMR} = \frac{\text{Observed deaths}}{\text{Expected deaths}} \times 100$$
+
+. . .
+
+**Example:** A thermal power plant town in Chhattisgarh
+
+| | Observed | Expected (based on India rates) |
+|---|:---:|:---:|
+| Total deaths | 103 | 75 |
+| **SMR** | | **137** |
+
+**Interpretation:** 37% excess mortality compared to national average, after accounting for age structure.
+
+. . .
+
+**Critical rule:** SMRs from different populations are **NOT comparable** to each other. Only compare each SMR to 100 (the reference).
+
+## Direct vs Indirect: Quick Guide {.smaller}
+
+| | Direct | Indirect |
+|---|---|---|
+| **Apply** | Study rates → standard weights | Standard rates → study weights |
+| **Need** | Reliable age-specific rates | Only age structure + total deaths |
+| **Get** | Age-standardized rate | SMR (ratio) |
+| **Compare?** | Yes — rates are directly comparable | No — SMR only vs reference (100) |
+| **Best for** | Large populations | Small populations |
+
+. . .
+
+**Remember:** Standardized rates are **fictional** — they tell you what *would* happen under a hypothetical age structure. Use crude rates for healthcare planning; use standardized rates for fair comparisons.
+
 ## Key Takeaways
 
 ::: {.incremental}
@@ -539,5 +674,6 @@ For each scenario, identify the study design:
 4. **RCT** = random allocation; the only design that establishes causation
 5. **Selection bias** must be prevented by design — cannot be fixed in analysis
 6. **Confounders** must satisfy three criteria; use **DAGs** to reason about them
-7. Choose your design based on: **research question, outcome frequency, time, ethics, and resources**
+7. **Never compare crude rates** across populations with different age structures — use **standardized rates**
+8. Choose your design based on: **research question, outcome frequency, time, ethics, and resources**
 :::

@@ -957,7 +957,376 @@ A cross-sectional study in Rajasthan finds that women using traditional chulhas 
 This adjusted estimate is closer to the true causal effect.
 :::
 
-## Part 8: Effect Modification (Interaction)
+## Part 8: Standardized Rates — Confounding by Age in Action
+
+The most common and practically important example of confounding occurs when you compare mortality or disease rates between two populations that have different age structures. This is so fundamental that epidemiology has developed a dedicated technique for it: **age standardization**.
+
+### The Paradox: Is Sweden Less Healthy Than India?
+
+Consider these crude death rates (deaths per 1,000 population per year):
+
+| Country | Crude Death Rate | Life Expectancy |
+|---------|:---:|:---:|
+| India | 6.4 | 70.8 years |
+| Sweden | 9.0 | 83.2 years |
+
+Sweden's crude death rate is **41% higher** than India's — yet Swedes live 12 years longer on average. How is this possible?
+
+The answer: **age is confounding the comparison.**
+
+```{r}
+#| label: india-sweden-age
+#| fig-height: 5
+#| fig-width: 10
+
+# Population age distribution: India vs Sweden (2023 estimates)
+age_structure <- tibble(
+  age_group = factor(rep(c("0–14", "15–44", "45–59", "60–74", "75+"), 2),
+                     levels = c("0–14", "15–44", "45–59", "60–74", "75+")),
+  country = rep(c("India", "Sweden"), each = 5),
+  proportion = c(
+    # India: very young population
+    24.2, 41.4, 16.0, 12.0, 6.4,
+    # Sweden: much older population
+    17.2, 35.3, 18.5, 16.0, 13.0
+  )
+)
+
+ggplot(age_structure, aes(x = age_group, y = proportion, fill = country)) +
+  geom_col(position = "dodge", color = "black", linewidth = 0.3) +
+  geom_text(aes(label = paste0(proportion, "%")),
+            position = position_dodge(width = 0.9), vjust = -0.5, size = 3.5) +
+  scale_fill_manual(values = c("India" = "#FF9933", "Sweden" = "#006AA7")) +
+  scale_y_continuous(limits = c(0, 50), labels = scales::label_percent(scale = 1)) +
+  labs(
+    title = "Why Sweden's Crude Death Rate Is Higher: It's the Age Structure",
+    subtitle = "Sweden has nearly twice the proportion of people aged 60+ compared to India",
+    x = "Age Group", y = "% of Population", fill = NULL
+  ) +
+  theme_clean() +
+  theme(legend.position = "top")
+```
+
+Sweden has 29% of its population aged 60 or above, compared to India's 18.4%. Since older people die at higher rates everywhere, Sweden's crude death rate is pulled up simply because a larger fraction of its population is in high-mortality age groups — not because Swedish healthcare is worse.
+
+::: {.callout-important title="The Core Problem"}
+**Crude rates are a weighted average** of age-specific rates, where the weights are each age group's share of the population. When two populations have different age structures, their crude rates are not comparable — even if one population is healthier at every age.
+:::
+
+### Step 1: Age-Specific Death Rates
+
+To see past the confounding, we need **age-specific death rates** (ASDR) — the death rate within each age group separately.
+
+```{r}
+#| label: india-sweden-asdr
+#| echo: true
+
+# Age-specific death rates per 1,000 (approximate, 2023 data from SRS India and WHO)
+comparison_data <- tibble(
+  age_group = c("0–14", "15–44", "45–59", "60–74", "75+"),
+
+  # India: population (millions) and deaths
+  india_pop = c(328, 562, 217, 163, 87),
+  india_asdr = c(2.8, 1.5, 5.2, 22.0, 80.0),
+
+  # Sweden: population (thousands) and death rates
+  sweden_pop = c(1810, 3710, 1945, 1680, 1365),
+  sweden_asdr = c(0.3, 0.4, 2.8, 12.0, 72.0)
+)
+
+# Display the comparison
+comparison_data %>%
+  mutate(
+    india_deaths = round(india_pop * india_asdr / 1000, 0),
+    sweden_deaths = round(sweden_pop * sweden_asdr / 1000, 0)
+  ) %>%
+  select(
+    `Age Group` = age_group,
+    `India Pop (M)` = india_pop,
+    `India ASDR` = india_asdr,
+    `Sweden Pop (K)` = sweden_pop,
+    `Sweden ASDR` = sweden_asdr
+  ) %>%
+  kbl(caption = "Age-Specific Death Rates per 1,000 — India vs Sweden",
+      digits = 1) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = TRUE) %>%
+  column_spec(1, bold = TRUE) %>%
+  add_header_above(c(" " = 1, "India" = 2, "Sweden" = 2))
+```
+
+::: {.callout-tip title="Key Insight"}
+**Sweden has LOWER age-specific death rates in EVERY age group.** The crude rate reversal is entirely due to Sweden having a much older population. This is a real-world Simpson's Paradox.
+:::
+
+### Step 2: Direct Standardization
+
+**Direct standardization** answers the question: *"What would each country's death rate be if both had the same age structure?"*
+
+**Method:** Choose a **standard population** and apply each country's age-specific rates to it.
+
+```{r}
+#| label: direct-standardization
+#| echo: true
+
+# WHO World Standard Population (proportions)
+standard_pop <- c(0.264, 0.378, 0.172, 0.118, 0.068)
+
+# Direct standardization: apply each country's ASDRs to the standard population
+direct_std <- comparison_data %>%
+  mutate(
+    std_weight = standard_pop,
+    india_weighted = india_asdr * std_weight,
+    sweden_weighted = sweden_asdr * std_weight
+  )
+
+# Display the calculation step by step
+direct_std %>%
+  select(
+    `Age Group` = age_group,
+    `Standard Pop (Wi)` = std_weight,
+    `India ASDR (Ri)` = india_asdr,
+    `Wi × Ri (India)` = india_weighted,
+    `Sweden ASDR (Ri)` = sweden_asdr,
+    `Wi × Ri (Sweden)` = sweden_weighted
+  ) %>%
+  kbl(caption = "Direct Standardization: Step-by-Step Calculation",
+      digits = 3) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = TRUE) %>%
+  column_spec(1, bold = TRUE) %>%
+  row_spec(0, bold = TRUE)
+
+# Age-standardized death rates
+india_asr <- sum(direct_std$india_weighted)
+sweden_asr <- sum(direct_std$sweden_weighted)
+```
+
+```{r}
+#| label: direct-std-result
+#| echo: false
+
+result_df <- tibble(
+  Measure = c("Crude Death Rate (per 1,000)", "Age-Standardized Rate (per 1,000)"),
+  India = c(6.4, round(india_asr, 2)),
+  Sweden = c(9.0, round(sweden_asr, 2))
+)
+
+result_df %>%
+  kbl(caption = "Crude vs Age-Standardized Death Rates") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE) %>%
+  row_spec(1, background = "#FFE0E0") %>%
+  row_spec(2, background = "#E0FFE0")
+```
+
+::: {.callout-note title="Formula: Direct Standardization"}
+$$\text{Age-Standardized Rate} = \sum_{i} \left( W_i \times R_i \right)$$
+
+Where $W_i$ = proportion of standard population in age group $i$, and $R_i$ = age-specific rate in the study population for age group $i$.
+
+**In words:** Multiply each age group's death rate by the standard population's weight for that age group, then add up. This removes the effect of different age structures.
+:::
+
+After standardization, the picture reverses: India's age-standardized death rate is higher than Sweden's — consistent with Sweden's longer life expectancy and better health indicators.
+
+### Within India: Kerala vs Bihar
+
+The same paradox plays out within India.
+
+```{r}
+#| label: kerala-bihar
+#| echo: true
+
+# Kerala vs Bihar: age-specific death rates and population structure
+# Source: SRS Statistical Report 2023 and Census projections
+kerala_bihar <- tibble(
+  age_group = c("0–14", "15–44", "45–59", "60–74", "75+"),
+
+  # Kerala: older, demographically advanced state
+  kerala_pop_pct = c(20.3, 34.2, 19.5, 16.8, 9.2),
+  kerala_asdr = c(0.8, 1.0, 4.5, 20.0, 85.0),
+
+  # Bihar: younger population, higher age-specific mortality
+  bihar_pop_pct = c(32.5, 40.0, 14.5, 8.5, 4.5),
+  bihar_asdr = c(4.5, 2.2, 7.0, 28.0, 95.0)
+)
+
+# Crude death rates (weighted by own population)
+kerala_crude <- sum(kerala_bihar$kerala_pop_pct / 100 * kerala_bihar$kerala_asdr)
+bihar_crude <- sum(kerala_bihar$bihar_pop_pct / 100 * kerala_bihar$bihar_asdr)
+
+# Direct standardization using India standard population
+india_std_pop <- c(0.242, 0.414, 0.160, 0.120, 0.064)
+
+kerala_std <- sum(india_std_pop * kerala_bihar$kerala_asdr)
+bihar_std <- sum(india_std_pop * kerala_bihar$bihar_asdr)
+```
+
+```{r}
+#| label: kerala-bihar-table
+#| echo: false
+
+# Fix the variable name and recalculate
+bihar_crude <- sum(kerala_bihar$bihar_pop_pct / 100 * kerala_bihar$bihar_asdr)
+
+kb_result <- tibble(
+  State = c("Kerala", "Bihar"),
+  `% Population 60+` = c("26.0%", "13.0%"),
+  `Crude Death Rate` = c(round(kerala_crude, 1), round(bihar_crude, 1)),
+  `Age-Standardized Rate` = c(round(kerala_std, 1), round(bihar_std, 1)),
+  `Life Expectancy` = c("76.3 years", "69.2 years")
+)
+
+kb_result %>%
+  kbl(caption = "Kerala vs Bihar: Crude vs Standardized Death Rates") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE) %>%
+  column_spec(1, bold = TRUE) %>%
+  column_spec(3, background = "#FFE0E0") %>%
+  column_spec(4, background = "#E0FFE0")
+```
+
+```{r}
+#| label: kerala-bihar-plot
+#| fig-height: 5
+#| fig-width: 10
+
+# Visualize the ASDR comparison
+kb_long <- kerala_bihar %>%
+  select(age_group, Kerala = kerala_asdr, Bihar = bihar_asdr) %>%
+  pivot_longer(-age_group, names_to = "state", values_to = "asdr") %>%
+  mutate(age_group = factor(age_group, levels = c("0–14", "15–44", "45–59", "60–74", "75+")))
+
+ggplot(kb_long, aes(x = age_group, y = asdr, fill = state)) +
+  geom_col(position = "dodge", color = "black", linewidth = 0.3) +
+  geom_text(aes(label = asdr),
+            position = position_dodge(width = 0.9), vjust = -0.5, size = 3.5) +
+  scale_fill_manual(values = c("Kerala" = "#2E86C1", "Bihar" = "#E74C3C")) +
+  labs(
+    title = "Bihar Has HIGHER Death Rates in Every Age Group",
+    subtitle = "Yet Kerala's crude death rate appears higher because of its older population",
+    x = "Age Group", y = "Deaths per 1,000", fill = NULL
+  ) +
+  theme_clean() +
+  theme(legend.position = "top")
+```
+
+Kerala — India's most demographically advanced state — has a higher crude death rate than Bihar despite having *lower* age-specific death rates in every age group and a life expectancy 7 years longer. The reason: 26% of Kerala's population is aged 60+, compared to only 13% in Bihar.
+
+### Step 3: Indirect Standardization and the SMR
+
+Sometimes you don't have reliable age-specific rates — perhaps you're studying a small industrial town with few deaths per age group, making the rates unstable. In that case, you use **indirect standardization**.
+
+**Method:** Instead of applying the study population's rates to a standard population, you apply the **standard population's rates** to the study population's age structure. This gives you the **expected** number of deaths if the study population experienced the standard rates.
+
+::: {.callout-note title="Formula: Standardized Mortality Ratio (SMR)"}
+$$\text{SMR} = \frac{\text{Observed deaths}}{\text{Expected deaths}} \times 100$$
+
+Where Expected deaths $= \sum_{i} (N_i \times R_i^{standard})$
+
+**In words:** How many deaths actually occurred in your population, divided by how many you *would expect* based on the national rates applied to your population's age structure.
+
+- **SMR = 100** → mortality same as the standard
+- **SMR > 100** → excess mortality (e.g., SMR = 130 means 30% more deaths than expected)
+- **SMR < 100** → lower mortality than the standard
+:::
+
+```{r}
+#| label: smr-example
+#| echo: true
+
+# Example: A thermal power plant town in Chhattisgarh
+# Small population — age-specific rates would be unstable
+# Use indirect standardization against all-India rates
+
+plant_town <- tibble(
+  age_group = c("0–14", "15–44", "45–59", "60–74", "75+"),
+  town_pop = c(3200, 5800, 2500, 1200, 300),
+  observed_deaths = c(8, 12, 18, 35, 30),
+  india_asdr = c(2.8, 1.5, 5.2, 22.0, 80.0)  # National age-specific rates per 1,000
+)
+
+# Expected deaths if the town had India's rates
+plant_town <- plant_town %>%
+  mutate(expected_deaths = town_pop * india_asdr / 1000)
+
+total_observed <- sum(plant_town$observed_deaths)
+total_expected <- sum(plant_town$expected_deaths)
+smr <- total_observed / total_expected * 100
+
+plant_town %>%
+  select(
+    `Age Group` = age_group,
+    `Town Pop` = town_pop,
+    `Observed Deaths` = observed_deaths,
+    `India ASDR (per 1,000)` = india_asdr,
+    `Expected Deaths` = expected_deaths
+  ) %>%
+  kbl(caption = "Indirect Standardization: Thermal Power Plant Town, Chhattisgarh",
+      digits = 1) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = TRUE) %>%
+  column_spec(1, bold = TRUE) %>%
+  row_spec(0, bold = TRUE)
+```
+
+**Total observed deaths:** `r total_observed` | **Total expected deaths:** `r round(total_expected, 1)` | **SMR = `r round(smr, 0)`**
+
+An SMR of `r round(smr, 0)` means the town has approximately `r round(smr - 100, 0)`% excess mortality compared to the national average, after accounting for its age structure. This could warrant an occupational health investigation.
+
+### Direct vs Indirect: When to Use Which
+
+```{r}
+#| label: direct-vs-indirect
+#| echo: false
+
+method_table <- tibble(
+  Feature = c(
+    "What you apply",
+    "What you need",
+    "Result",
+    "Comparable across populations?",
+    "Best when",
+    "Limitation"
+  ),
+  `Direct Standardization` = c(
+    "Study population's ASDRs → standard population weights",
+    "Reliable age-specific rates in study population",
+    "Age-standardized rate (per 1,000)",
+    "Yes — rates are directly comparable",
+    "Large populations with stable age-specific rates",
+    "Need adequate numbers in every age group"
+  ),
+  `Indirect Standardization` = c(
+    "Standard population's ASDRs → study population structure",
+    "Only the age structure and total deaths in study population",
+    "SMR (Standardized Mortality Ratio)",
+    "No — SMRs from different populations are NOT comparable to each other",
+    "Small populations where age-specific rates are unstable",
+    "SMR depends on both the standard rates and the study population's age structure"
+  )
+)
+
+method_table %>%
+  kbl(caption = "Direct vs Indirect Standardization") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = TRUE) %>%
+  column_spec(1, bold = TRUE, width = "22%") %>%
+  column_spec(2:3, width = "39%")
+```
+
+::: {.callout-warning title="Common Mistakes"}
+1. **Comparing crude rates** across populations with different age structures without standardization.
+2. **Comparing two SMRs** from different study populations. SMRs are valid only against the reference — NOT against each other. If you need to compare two populations, use direct standardization.
+3. **Using different standard populations** for direct standardization and then comparing the results. Rates standardized to different standards are not comparable.
+4. **Forgetting that standardized rates are fictional.** They tell you what the rate *would be* if the population had a certain age structure. They are useful for comparison, not for planning healthcare resources (use crude rates for that).
+:::
+
+### Beyond Age: The General Principle
+
+Age is the most common confounder addressed by standardization, but the same logic applies to any variable:
+
+- **Sex-standardized rates** — compare disease rates between regions after removing differences in sex composition
+- **SES-standardized rates** — compare health outcomes after removing socioeconomic structure differences
+
+The principle is always the same: when a variable confounds the comparison between populations, hold it constant by applying a common standard.
+
+## Part 9: Effect Modification (Interaction)
 
 **Effect modification** is NOT confounding. It occurs when the effect of an exposure differs depending on the level of a third variable.
 
@@ -994,7 +1363,7 @@ ggplot(em_data, aes(x = reorder(baseline_bp, y), y = treatment_effect_reduction,
   theme_clean()
 ```
 
-## Part 9: Hierarchy of Evidence and Study Quality
+## Part 10: Hierarchy of Evidence and Study Quality
 
 The **hierarchy of evidence** ranks study designs by their ability to establish causality:
 
@@ -1034,7 +1403,7 @@ The hierarchy is a **guideline**, not a rule. Judge each study on methodological
 - **Precision**: Are confidence intervals narrow or wide?
 :::
 
-## Part 10: Choosing the Right Study Design
+## Part 11: Choosing the Right Study Design
 
 ### Decision Framework
 
@@ -1374,6 +1743,43 @@ make_mcq(
 
 :::
 
+---
+
+**Q8.** Kerala has a higher crude death rate than Bihar, despite having better health indicators and longer life expectancy. What explains this paradox?
+
+```{r}
+#| echo: false
+#| results: asis
+make_mcq(
+  id = "m7q8",
+  question = "Kerala has a higher crude death rate than Bihar, despite having better health indicators and longer life expectancy. What explains this paradox?",
+  options = c(
+    "Kerala's healthcare system is actually worse than Bihar's" = "Incorrect. Kerala consistently outperforms Bihar on all health indicators — infant mortality, maternal mortality, life expectancy. The paradox is structural, not about quality of care.",
+    "answer:Kerala has an older population, so crude rates are confounded by age" = "Correct! Kerala is demographically advanced — 26% of its population is 60+ vs 13% in Bihar. Since older people have higher death rates, the crude rate is pulled up. Age-standardized rates reveal Kerala's true advantage.",
+    "Bihar has better data collection, making its rates appear lower" = "Incorrect. While data quality varies, Bihar's SRS coverage is adequate. The paradox persists even with perfect data — it's a structural issue with age composition.",
+    "The crude death rate formula is wrong for Kerala" = "Incorrect. The formula is the same — total deaths ÷ total population. The issue is that this formula does not account for age structure differences."
+  )
+)
+```
+
+---
+
+**Q9.** In indirect standardization of a factory town (observed = 103 deaths, expected = 75 deaths), the SMR is 137. What does this mean?
+
+```{r}
+#| echo: false
+#| results: asis
+make_mcq(
+  id = "m7q9",
+  question = "In indirect standardization of a factory town (observed = 103 deaths, expected = 75 deaths), the SMR is 137. What does this mean?",
+  options = c(
+    "137 excess deaths occurred in the town" = "Incorrect. The excess is 103 − 75 = 28 deaths, not 137. The SMR is a ratio expressed as a percentage.",
+    "The town's crude death rate is 137 per 1,000" = "Incorrect. SMR is not a rate. It is a ratio of observed to expected deaths, expressed as a percentage of the reference population's experience.",
+    "answer:The town had 37% more deaths than expected based on its age structure and national rates" = "Correct! SMR = (103/75) × 100 = 137. This means 37% excess mortality compared to what national age-specific rates would predict for this population's age structure.",
+    "This SMR can be directly compared with SMRs from other towns" = "Incorrect. SMRs from different populations are NOT directly comparable because they depend on both the standard rates and the local age structure. Use direct standardization if you need to compare multiple populations."
+  )
+)
+```
 
 ---
 
