@@ -8,6 +8,7 @@ format:
     slide-number: true
     show-slide-number: all
     chalkboard: false
+    scrollable: true
     footer: "Biostatistics for Clinicians | Module 7"
     transition: fade
     incremental: false
@@ -53,7 +54,6 @@ A 10-year cohort study (n = 20,000) found:
 
 Headlines: *"Wine is Cardioprotective!"*
 
-. . .
 
 **But wait —** wine drinkers also:
 
@@ -88,6 +88,41 @@ digraph wine_confound {
 ```
 :::
 :::
+
+## Can You Fill In This Design? {.smaller}
+
+```{r}
+#| fig-height: 4.5
+#| fig-width: 9
+grViz("
+digraph cross_blank {
+  graph[rankdir = LR, bgcolor = 'transparent', nodesep = 0.5, ranksep = 0.7]
+  node [fontname = 'Helvetica', shape = box, style = filled, fontsize = 11, margin = '0.15,0.08']
+
+  A [label = '?', fillcolor = '#B8D4E3']
+  B [label = '?', fillcolor = '#E8C07A']
+  C [label = '?', fillcolor = '#A8D5A2']
+  D [label = '?', fillcolor = '#E89595']
+  E [label = '?', fillcolor = '#D4EAF7']
+  F [label = '?', fillcolor = '#E89595']
+  G [label = '?', fillcolor = '#D4EAF7']
+
+  edge [fontsize = 8, fontcolor = '#555']
+  A -> B [label = '  ?  ']
+  A -> C [label = '  ?  ']
+  B -> D [label = '  ?  ']
+  B -> E [label = '  ?  ']
+  C -> F [label = '  ?  ']
+  C -> G [label = '  ?  ']
+}
+")
+```
+
+**Clue:** This design takes a **snapshot** — everything is measured at **one time point**.
+
+. . .
+
+**Answer:** Cross-sectional study — population → classify exposed/non-exposed → assess outcome simultaneously.
 
 ## Cross-Sectional Study {.smaller}
 
@@ -142,6 +177,58 @@ digraph cross_sectional {
 :::
 :::
 
+## Cross-Sectional: What Can You Measure? {.smaller}
+
+|  | **Disease +** | **Disease −** |
+|---|:---:|:---:|
+| **Exposed** | a | b |
+| **Non-exposed** | c | d |
+
+. . .
+
+**Prevalence** = (a + c) / (a + b + c + d) — proportion with disease at that time point
+
+**Prevalence Odds Ratio** = (a × d) / (b × c) — how much more common is disease among exposed?
+
+. . .
+
+**Limitation:** You measured exposure and outcome *simultaneously* — you can't tell which came first. Association ≠ temporal sequence.
+
+## Can You Fill In This Design? {.smaller}
+
+```{r}
+#| fig-height: 4.5
+#| fig-width: 9
+grViz("
+digraph cc_blank {
+  graph[rankdir = LR, bgcolor = 'transparent', nodesep = 0.5, ranksep = 0.7]
+  node [fontname = 'Helvetica', shape = box, style = filled, fontsize = 11, margin = '0.15,0.08']
+
+  A [label = '?', fillcolor = '#B8D4E3']
+  B [label = '?', fillcolor = '#E89595']
+  C [label = '?', fillcolor = '#D4EAF7']
+  D [label = '?', fillcolor = '#E8C07A']
+  E [label = '?', fillcolor = '#A8D5A2']
+  F [label = '?', fillcolor = '#E8C07A']
+  G [label = '?', fillcolor = '#A8D5A2']
+
+  edge [fontsize = 8, fontcolor = '#555']
+  A -> B [label = '  ?  ']
+  A -> C [label = '  ?  ']
+  B -> D [label = '  ?  ']
+  B -> E [label = '  ?  ']
+  C -> F [label = '  ?  ']
+  C -> G [label = '  ?  ']
+}
+")
+```
+
+**Clue:** This design starts from the **outcome** and looks **backward** in time. Efficient for rare diseases.
+
+. . .
+
+**Answer:** Case-control study — select cases & controls → ascertain past exposure.
+
 ## Case-Control Study {.smaller}
 
 **Purpose:** Start with the **disease** and look **backward** for exposure
@@ -195,6 +282,60 @@ digraph case_control {
 **Example:** 100 oral cancer patients + 200 controls — asked about paan chewing history
 :::
 :::
+
+## Case-Control: What Can You Measure? {.smaller}
+
+|  | **Cases** | **Controls** |
+|---|:---:|:---:|
+| **Exposed** | a | b |
+| **Non-exposed** | c | d |
+
+. . .
+
+**Odds Ratio** = (a × d) / (b × c)
+
+- OR > 1 → exposure more common in cases (risk factor)
+- OR < 1 → exposure less common in cases (protective)
+- OR = 1 → no association
+
+. . .
+
+**Why not RR?** You selected cases and controls separately — you don't know the total population at risk, so you can't calculate incidence.
+
+## Can You Fill In This Design? {.smaller}
+
+```{r}
+#| fig-height: 4.5
+#| fig-width: 9
+grViz("
+digraph cohort_blank {
+  graph[rankdir = LR, bgcolor = 'transparent', nodesep = 0.5, ranksep = 0.7]
+  node [fontname = 'Helvetica', shape = box, style = filled, fontsize = 11, margin = '0.15,0.08']
+
+  A [label = '?', fillcolor = '#B8D4E3']
+  B [label = '?', fillcolor = '#E8C07A']
+  C [label = '?', fillcolor = '#A8D5A2']
+  D [label = '?', fillcolor = '#E89595']
+  E [label = '?', fillcolor = '#D4EAF7']
+  F [label = '?', fillcolor = '#E89595']
+  G [label = '?', fillcolor = '#D4EAF7']
+
+  edge [fontsize = 8, fontcolor = '#555']
+  A -> B [label = '  ?  ']
+  A -> C [label = '  ?  ']
+  B -> D [label = '  ?  ']
+  B -> E [label = '  ?  ']
+  C -> F [label = '  ?  ']
+  C -> G [label = '  ?  ']
+}
+")
+```
+
+**Clue:** Everyone starts **disease-free**. You classify by exposure and follow **forward** over time.
+
+. . .
+
+**Answer:** Cohort study — disease-free population → classify exposed/non-exposed → follow up for outcome.
 
 ## Cohort Study {.smaller}
 
@@ -251,6 +392,61 @@ digraph cohort {
 :::
 :::
 
+## Cohort: What Can You Measure? {.smaller}
+
+|  | **Disease +** | **Disease −** | **Total** |
+|---|:---:|:---:|:---:|
+| **Exposed** | a | b | a + b |
+| **Non-exposed** | c | d | c + d |
+
+. . .
+
+**Risk in exposed** = a / (a + b)  &nbsp;&nbsp;&nbsp; **Risk in non-exposed** = c / (c + d)
+
+**Relative Risk (RR)** = Risk in exposed / Risk in non-exposed
+
+**Absolute Risk Difference** = Risk in exposed − Risk in non-exposed
+
+. . .
+
+**Why cohort can do this but case-control can't:** You followed a defined population forward — so the denominators (a+b, c+d) represent the actual groups at risk.
+
+## Can You Fill In This Design? {.smaller}
+
+```{r}
+#| fig-height: 4.5
+#| fig-width: 9
+grViz("
+digraph rct_blank {
+  graph[rankdir = LR, bgcolor = 'transparent', nodesep = 0.5, ranksep = 0.7]
+  node [fontname = 'Helvetica', shape = box, style = filled, fontsize = 11, margin = '0.15,0.08']
+
+  A [label = '?', fillcolor = '#B8D4E3']
+  B [label = '?', fillcolor = '#E8C07A']
+  C [label = '?', fillcolor = '#A8D5A2']
+  D [label = '?', fillcolor = '#E89595']
+  E [label = '?', fillcolor = '#D4EAF7']
+  F [label = '?', fillcolor = '#E89595']
+  G [label = '?', fillcolor = '#D4EAF7']
+
+  edge [fontsize = 8, fontcolor = '#c0392b', fontname = 'Helvetica-Bold']
+  A -> B [label = '  ?  ']
+  A -> C [label = '  ?  ']
+  edge [fontsize = 8, fontcolor = '#555', fontname = 'Helvetica']
+  B -> D [label = '  ?  ']
+  B -> E [label = '  ?  ']
+  C -> F [label = '  ?  ']
+  C -> G [label = '  ?  ']
+}
+")
+```
+
+**Clue:** Looks like a cohort — but the **allocation to groups is done by the investigator**, not nature. The red arrows are the giveaway.
+
+. . .
+
+**Answer:** Randomized Controlled Trial — eligible participants → randomize to treatment/control → follow up for outcome.
+
 ## Randomized Controlled Trial (RCT) {.smaller}
 
 **Purpose:** The **gold standard** — test whether an intervention *causes* the outcome
@@ -306,6 +502,25 @@ digraph rct {
 **Example:** Randomly assign 200 diabetics to yoga vs standard care for 6 months
 :::
 :::
+
+## RCT: What Can You Measure? {.smaller}
+
+|  | **Event** | **No Event** | **Total** |
+|---|:---:|:---:|:---:|
+| **Treatment** | a | b | a + b |
+| **Control** | c | d | c + d |
+
+. . .
+
+**Control Event Rate (CER)** = c / (c + d) &nbsp;&nbsp;&nbsp; **Treatment Event Rate (TER)** = a / (a + b)
+
+**Absolute Risk Reduction (ARR)** = CER − TER
+
+**Number Needed to Treat (NNT)** = 1 / ARR — how many patients must be treated to prevent one event
+
+. . .
+
+**Clinical meaning of NNT:** If NNT = 20, you treat 20 patients to prevent 1 bad outcome. Lower NNT = more clinically impactful treatment.
 
 ## Design Comparison at a Glance {.smaller}
 
@@ -516,19 +731,37 @@ digraph evidence_pyramid {
 
 **Higher = stronger evidence for causation** — but not always feasible or ethical!
 
-## Exercise: Identify the Design {.smaller}
+## Identify the Design — Vignette 1 {.smaller}
 
-For each scenario, identify the study design:
+A district hospital in Madhya Pradesh screens 800 pregnant women attending their first antenatal visit. Blood samples are drawn for haemoglobin, and a questionnaire records dietary iron intake. The researchers want to estimate **anaemia prevalence** and its association with diet.
 
-::: {.incremental}
-1. *"Measured BP and salt intake in 500 adults at a health camp"* → **Cross-sectional** (snapshot of exposure + outcome)
+. . .
 
-2. *"Identified 100 oral cancer patients and 200 controls, asked about paan chewing"* → **Case-control** (start from disease, look back at exposure)
+**Cross-sectional** — Exposure (diet) and outcome (anaemia) measured at the **same time point**. No follow-up, no selection by disease. The giveaway: "screens at first visit" = single snapshot.
 
-3. *"Followed 5,000 factory workers for 10 years, comparing smokers vs non-smokers for lung disease"* → **Cohort** (classify by exposure, follow forward for outcome)
+## Identify the Design — Vignette 2 {.smaller}
 
-4. *"Randomly assigned 200 diabetics to yoga vs standard care for 6 months"* → **RCT** (random allocation of intervention)
-:::
+Researchers at a cancer centre identify 150 patients with **gallbladder carcinoma** and select 300 age- and sex-matched patients admitted for unrelated surgeries. Both groups are interviewed about typhoid history, use of mustard oil, and family history.
+
+. . .
+
+**Case-control** — Started from the disease (gallbladder cancer), selected controls, and looked **backward** at past exposures. The giveaway: "identify patients with disease" + "interviewed about past history."
+
+## Identify the Design — Vignette 3 {.smaller}
+
+A research team enrols 3,000 **non-diabetic** adults aged 30–50 from an urban slum in Pune. At baseline, they record physical activity levels, BMI, and fasting glucose. They follow the cohort for **8 years**, checking annually for new-onset type 2 diabetes.
+
+. . .
+
+**Cohort** — Everyone was disease-free at start, classified by exposure (physical activity), and followed **forward** for outcome. The giveaway: "non-diabetic at enrolment" + "follow for 8 years."
+
+## Identify the Design — Vignette 4 {.smaller}
+
+Forty primary health centres in Chhattisgarh are randomly allocated: 20 receive a **mHealth reminder system** for DOTS adherence, 20 continue with usual care. After 12 months, TB treatment completion rates are compared.
+
+. . .
+
+**Cluster RCT** — The investigator **randomly allocated** the intervention. Groups were followed forward and outcomes compared. The giveaway: "randomly allocated" — nature didn't decide, the researcher did. (Cluster because the unit of randomization is the PHC, not individual patients.)
 
 ## The Sweden–India Paradox {.smaller}
 
