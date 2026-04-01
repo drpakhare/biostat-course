@@ -1,0 +1,523 @@
+---
+title: "Meta-Analysis and Evidence Synthesis"
+subtitle: "Combining Evidence from Multiple Studies"
+format:
+  revealjs:
+    theme: [default, ../styles-slides.css]
+    embed-resources: true
+    slide-number: true
+    show-slide-number: all
+    chalkboard: false
+    scrollable: true
+    footer: "Biostatistics for Clinicians | Module 13"
+    transition: fade
+    incremental: false
+    code-fold: true
+    fig-align: center
+    width: 1280
+    height: 720
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{r}
+#| label: setup
+#| include: false
+library(tidyverse)
+library(kableExtra)
+library(patchwork)
+library(scales)
+set.seed(42)
+```
+
+## Learning Objectives
+
+::: {.incremental}
+1. **Distinguish** systematic review from meta-analysis
+2. **Read and interpret** forest plots — estimates, CIs, weights, and pooled effects
+3. **Choose** between fixed-effect and random-effects models
+4. **Calculate and interpret** I² for heterogeneity
+5. **Assess** publication bias using funnel plots
+6. **Evaluate** evidence quality using GRADE
+7. **Recognise** when meta-analysis is inappropriate
+:::
+
+## Clinical Hook: TB in Healthcare Workers {.smaller}
+
+::: {.columns}
+::: {.column width="55%"}
+**Rajnish Joshi** (now AIIMS Bhopal) led a systematic review in *PLoS Medicine* (2006):
+
+**"TB among Health-Care Workers in Low- and Middle-Income Countries"**
+
+Individual studies told different stories:
+
+- Some: LTBI prevalence **33%**
+- Others: LTBI prevalence **79%**
+- Risk estimates ranged from **2× to 5×** the general population
+
+. . .
+
+The team synthesised **42 articles** (51 studies):
+
+- Pooled LTBI prevalence: **54%** (range 33–79%)
+- Revealed *why* estimates varied — TB burden, infection control, diagnostic method
+
+**Meta-analysis turns conflicting signals into a coherent picture.**
+
+*Joshi R, Reingold AL, Menzies D, Pai M. PLoS Med 2006;3(12):e494.*
+:::
+
+::: {.column width="45%"}
+```{r}
+#| fig-height: 5.5
+#| fig-width: 5.5
+
+# Conceptual diagram: many studies → one answer
+concept_df <- tibble(
+  study = paste("Study", 1:8),
+  estimate = c(33, 55, 42, 79, 63, 45, 71, 54),
+  y = 8:1
+)
+
+ggplot(concept_df, aes(x = estimate, y = y)) +
+  geom_point(size = 4, color = "#2c3e50") +
+  geom_segment(aes(x = estimate - runif(8, 5, 15), xend = estimate + runif(8, 5, 15),
+                    yend = y), linewidth = 0.8, color = "#2c3e50") +
+  geom_vline(xintercept = 54, linetype = "dashed", color = "#e74c3c", linewidth = 1.2) +
+  annotate("text", x = 54, y = 0.3, label = "Pooled: 54%", fontface = "bold",
+           color = "#e74c3c", size = 4.5) +
+  scale_y_continuous(breaks = 1:8, labels = paste("Study", 8:1)) +
+  labs(title = "Many Studies, One Synthesis",
+       x = "LTBI Prevalence (%)", y = NULL) +
+  theme_minimal(base_size = 14) +
+  theme(panel.grid.major.y = element_blank(),
+        plot.title = element_text(face = "bold"))
+```
+:::
+:::
+
+## Systematic Review vs Meta-Analysis {.smaller}
+
+| | **Systematic Review** | **Meta-Analysis** |
+|---|---|---|
+| **What** | Structured method for finding, appraising, synthesising *all* evidence | Statistical technique combining results into a pooled estimate |
+| **Nature** | Qualitative (can exist without statistics) | Quantitative (requires numbers) |
+| **Stand-alone?** | Yes | No — needs a systematic review |
+| **Output** | Evidence summary, quality assessment | Pooled effect, forest plot, I² |
+
+. . .
+
+::: {.callout-important title="The Hierarchy"}
+A meta-analysis is only as good as the systematic review that feeds it. **Garbage in, garbage out.**
+:::
+
+## The PICO Framework {.smaller}
+
+Every systematic review starts with a focused question:
+
+| Component | Meaning | Example (Joshi et al.) |
+|---|---|---|
+| **P**opulation | Who? | Healthcare workers in LMICs |
+| **I**ntervention/Exposure | What? | Working in healthcare settings |
+| **C**omparator | Compared to? | General population |
+| **O**utcome | What measured? | LTBI and active TB prevalence |
+
+. . .
+
+**Without a clear PICO, you don't know what to search for, what to include, or what to pool.**
+
+## The Forest Plot — Anatomy {.smaller}
+
+```{r}
+#| fig-height: 6
+#| fig-width: 10
+
+# Simulated teaching data inspired by TB in healthcare workers
+set.seed(42)
+studies <- tibble(
+  study = c("Pai 2005 (India)", "Yanai 2003 (Thailand)", "Joshi 2006 (Ethiopia)",
+            "Kassim 2000 (Malawi)", "Balt 1998 (Russia)", "Rao 2009 (India)",
+            "Naidoo 2006 (S. Africa)", "Dimitrova 2006 (Russia)"),
+  or = c(2.4, 3.1, 1.8, 5.2, 2.9, 1.5, 4.1, 2.2),
+  or_lo = c(1.5, 1.9, 1.1, 2.4, 1.6, 0.9, 2.0, 1.3),
+  or_hi = c(3.8, 5.0, 3.0, 11.3, 5.3, 2.5, 8.4, 3.7),
+  weight = c(16, 14, 15, 6, 10, 18, 8, 13)
+)
+
+pooled_or <- 2.6; pooled_lo <- 1.9; pooled_hi <- 3.5
+
+studies <- studies %>% mutate(study = fct_rev(fct_inorder(study)))
+
+ggplot(studies, aes(y = study)) +
+  geom_point(aes(x = or, size = weight), color = "#2c3e50", shape = 15) +
+  geom_errorbarh(aes(xmin = or_lo, xmax = or_hi), height = 0.2, color = "#2c3e50") +
+  annotate("polygon",
+           x = c(pooled_lo, pooled_or, pooled_hi, pooled_or),
+           y = c(0.3, 0.55, 0.3, 0.05),
+           fill = "#e74c3c", alpha = 0.7) +
+  annotate("text", x = pooled_or, y = -0.3,
+           label = paste0("Pooled OR = ", pooled_or, " (", pooled_lo, "–", pooled_hi, ")"),
+           fontface = "bold", size = 3.5, color = "#e74c3c") +
+  geom_vline(xintercept = 1, linetype = "dashed", color = "gray50") +
+  scale_x_log10(breaks = c(0.5, 1, 2, 4, 8, 12)) +
+  scale_size_continuous(range = c(2, 8), guide = "none") +
+  labs(title = "Forest Plot: TB Risk in Healthcare Workers vs General Population",
+       subtitle = "Simulated teaching data inspired by Joshi R et al. (PLoS Med, 2006)",
+       x = "Odds Ratio (log scale)", y = NULL) +
+  annotate("text", x = 0.6, y = 8.5, label = "← Lower risk\n   in HCWs", size = 3, color = "gray50") +
+  annotate("text", x = 6, y = 8.5, label = "Higher risk →\n   in HCWs", size = 3, color = "gray50") +
+  theme_minimal(base_size = 14) +
+  theme(panel.grid.major.y = element_blank(),
+        plot.title = element_text(face = "bold"))
+```
+
+## Reading the Forest Plot {.smaller}
+
+**Each row** = one study:
+
+- **Square** = point estimate (OR, RR, or mean difference)
+- **Horizontal line** = 95% confidence interval
+- **Square size** = study weight (larger studies → larger squares)
+
+. . .
+
+**Bottom diamond** = pooled estimate:
+
+- **Centre** = pooled effect size
+- **Width** = 95% CI of pooled estimate
+- If the diamond **does not cross the null line** (OR = 1) → statistically significant
+
+. . .
+
+**X-axis** is on a **log scale** for ratios — so OR = 0.5 and OR = 2.0 are equidistant from 1.0
+
+## Fixed-Effect vs Random-Effects {.smaller}
+
+| | **Fixed-Effect** | **Random-Effects** |
+|---|---|---|
+| **Assumption** | One true effect across all studies | Each study has a *different* true effect |
+| **Between-study variation** | Sampling error only | Sampling error + real differences |
+| **CI width** | Narrower | Wider (more conservative) |
+| **Weighting** | Proportional to study size | More balanced — small studies get more weight |
+| **Use when** | Studies very similar; I² < 25% | Studies diverse; I² ≥ 50% |
+
+. . .
+
+::: {.callout-tip title="Practical Rule"}
+When in doubt, **use random-effects**. If heterogeneity is truly zero, both models give the same result anyway.
+:::
+
+## Fixed vs Random — Visualised {.smaller}
+
+```{r}
+#| fig-height: 4.5
+#| fig-width: 10
+
+fe_or <- 2.3; fe_lo <- 1.8; fe_hi <- 2.9
+re_or <- 2.6; re_lo <- 1.9; re_hi <- 3.5
+
+comp_df <- tibble(
+  model = c("Fixed-effect", "Random-effects"),
+  or = c(fe_or, re_or),
+  lo = c(fe_lo, re_lo),
+  hi = c(fe_hi, re_hi)
+) %>% mutate(model = fct_rev(fct_inorder(model)))
+
+ggplot(comp_df, aes(y = model)) +
+  geom_point(aes(x = or), size = 6, shape = 18, color = c("#e74c3c", "#2c3e50")) +
+  geom_errorbarh(aes(xmin = lo, xmax = hi), height = 0.15,
+                 color = c("#e74c3c", "#2c3e50"), linewidth = 1.2) +
+  geom_vline(xintercept = 1, linetype = "dashed", color = "gray50") +
+  scale_x_continuous(limits = c(0.5, 5), breaks = 1:5) +
+  labs(title = "Same Data, Different Models",
+       subtitle = "Random-effects gives wider CI — accounts for between-study variation",
+       x = "Pooled Odds Ratio", y = NULL) +
+  theme_minimal(base_size = 14) +
+  theme(panel.grid.major.y = element_blank(),
+        axis.text.y = element_text(size = 13, face = "bold"),
+        plot.title = element_text(face = "bold"))
+```
+
+## Heterogeneity — The I² Statistic {.smaller}
+
+$$I^2 = \frac{Q - df}{Q} \times 100\%$$
+
+| **I² value** | **Interpretation** |
+|:---:|---|
+| 0–25% | Low — studies agree well |
+| 25–50% | Moderate — some differences |
+| 50–75% | Substantial — results vary considerably |
+| > 75% | Considerable — may be too different to pool |
+
+. . .
+
+**I² tells you what percentage of variation is real (not chance).**
+
+High I² → investigate *why* before pooling.
+
+## Heterogeneity Example: OSA in India {.smaller}
+
+```{r}
+#| fig-height: 5.5
+#| fig-width: 10
+
+# Simulated data inspired by OSA meta-analysis
+osa_studies <- tibble(
+  study = c("Sharma 2006", "Udwadia 2004", "Reddy 2009", "Puri 2015",
+            "Kale 2018", "Suri 2008", "Bhatia 2017", "BLESS 2024*"),
+  prev = c(4.9, 7.5, 3.6, 13.7, 9.3, 19.5, 8.2, 30.5),
+  lo = c(2.1, 4.2, 1.8, 9.1, 5.8, 12.3, 5.0, 27.6),
+  hi = c(7.7, 10.8, 5.4, 18.3, 12.8, 26.7, 11.4, 33.4),
+  method = c("Questionnaire", "PSG (clinic)", "Questionnaire", "PSG (clinic)",
+             "Questionnaire", "PSG (clinic)", "Questionnaire", "PSG (population)")
+) %>% mutate(study = fct_rev(fct_inorder(study)))
+
+ggplot(osa_studies, aes(y = study)) +
+  geom_point(aes(x = prev, color = method), size = 4, shape = 15) +
+  geom_errorbarh(aes(xmin = lo, xmax = hi, color = method), height = 0.2) +
+  scale_color_manual(values = c("Questionnaire" = "#7f8c8d", "PSG (clinic)" = "#3498db",
+                                "PSG (population)" = "#e74c3c")) +
+  labs(title = "OSA Prevalence in India — Why I² = 98%",
+       subtitle = "BLESS cohort (Pakhare, Joshi A, 2024): 30.5% vs pooled meta-analysis: 11%",
+       x = "Prevalence (%)", y = NULL, color = "Diagnostic method") +
+  theme_minimal(base_size = 14) +
+  theme(panel.grid.major.y = element_blank(), legend.position = "right",
+        plot.title = element_text(face = "bold"))
+```
+
+. . .
+
+**Sources:** Diagnostic method, population type, OSA definition, age/BMI, scoring rules
+
+## Publication Bias — The Funnel Plot {.smaller}
+
+```{r}
+#| fig-height: 5
+#| fig-width: 10
+
+set.seed(42)
+n_studies <- 20
+true_effect <- log(2.5)
+
+se_sym <- runif(n_studies, 0.15, 0.8)
+effect_sym <- rnorm(n_studies, true_effect, se_sym)
+funnel_sym <- tibble(effect = effect_sym, se = se_sym, type = "Symmetric (No bias)")
+
+se_asym <- runif(n_studies, 0.15, 0.8)
+effect_asym <- rnorm(n_studies, true_effect, se_asym)
+keep <- !(se_asym > 0.5 & effect_asym < log(1.5))
+funnel_asym <- tibble(effect = effect_asym[keep], se = se_asym[keep], type = "Asymmetric (Publication bias)")
+
+funnel_data <- bind_rows(funnel_sym, funnel_asym)
+
+ggplot(funnel_data, aes(x = exp(effect), y = se)) +
+  geom_point(size = 3, color = "#2c3e50", alpha = 0.7) +
+  geom_vline(xintercept = exp(true_effect), linetype = "dashed", color = "#e74c3c") +
+  scale_y_reverse() + scale_x_log10() +
+  facet_wrap(~type) +
+  labs(title = "Funnel Plots: Detecting Publication Bias",
+       subtitle = "Left: symmetric (no bias) | Right: small null studies missing (bias)",
+       x = "Odds Ratio (log scale)", y = "Standard Error (inverted)") +
+  theme_minimal(base_size = 14) +
+  theme(strip.text = element_text(face = "bold", size = 12),
+        plot.title = element_text(face = "bold"))
+```
+
+. . .
+
+**Asymmetric funnel** → small studies with null results are missing → **publication bias**
+
+**Egger's test** provides a formal test for asymmetry (needs ≥ 10 studies)
+
+## Risk of Bias — Cochrane RoB 2 {.smaller}
+
+For RCTs, assess **five domains**:
+
+```{r}
+#| results: asis
+
+rob <- tibble(
+  Domain = c("Randomisation", "Deviations from intervention",
+             "Missing outcome data", "Outcome measurement",
+             "Selection of reported result"),
+  `What can go wrong` = c(
+    "Inadequate sequence generation / allocation concealment",
+    "Unblinded participants change behaviour",
+    "Differential dropout between groups",
+    "Assessor knows group; subjective outcome",
+    "Authors pick the 'best' outcome or time point"
+  )
+)
+
+kable(rob, format = "html", align = c("l", "l")) %>%
+  kable_styling(full_width = TRUE, font_size = 15) %>%
+  row_spec(0, background = "#2c3e50", color = "white", bold = TRUE) %>%
+  column_spec(1, bold = TRUE, width = "30%")
+```
+
+. . .
+
+**Traffic light:** Each domain rated **Low** (green), **Some concerns** (yellow), **High** (red)
+
+A study with **high risk in even one critical domain** can bias the whole meta-analysis.
+
+## GRADE — Rating Evidence Quality {.smaller}
+
+| | **Factor** | **Rating** |
+|---|---|:---:|
+| **Start** | RCTs | High (⊕⊕⊕⊕) |
+| | Observational | Low (⊕⊕○○) |
+| **Downgrade** | Risk of bias | −1 or −2 |
+| | Inconsistency (I²) | −1 or −2 |
+| | Indirectness | −1 or −2 |
+| | Imprecision | −1 or −2 |
+| | Publication bias | −1 or −2 |
+| **Upgrade** | Large effect | +1 or +2 |
+| | Dose-response | +1 |
+| | Confounders reduce effect | +1 |
+
+. . .
+
+**Final ratings:** High (⊕⊕⊕⊕) → Very low (⊕○○○)
+
+A statistically significant pooled effect from very-low-quality evidence is **not compelling**.
+
+## PRISMA Flow Diagram {.smaller}
+
+```{r}
+#| fig-height: 5.5
+#| fig-width: 10
+
+prisma_df <- tibble(
+  x = c(5, 5, 5, 5, 5, 9, 9, 9),
+  y = c(10, 8, 6, 4, 2, 8, 6, 4),
+  label = c(
+    "Records identified\n(n = 3,842)",
+    "After duplicates removed\n(n = 2,156)",
+    "Full-text assessed\n(n = 187)",
+    "Qualitative synthesis\n(n = 51)",
+    "Meta-analysis\n(n = 42)",
+    "Excluded by title/abstract\n(n = 1,969)",
+    "Full-text excluded (n = 136)\nNo denominator (58)\nNot LMIC (42), Review (36)",
+    "Not suitable for pooling\n(n = 9)"
+  ),
+  box = c(TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE)
+)
+
+ggplot(prisma_df) +
+  geom_label(data = prisma_df %>% filter(box),
+             aes(x = x, y = y, label = label),
+             fill = "#d4e4f7", color = "#1e3a5f", size = 3.2, fontface = "bold",
+             label.padding = unit(0.4, "cm")) +
+  geom_label(data = prisma_df %>% filter(!box),
+             aes(x = x, y = y, label = label),
+             fill = "#fde8e8", color = "#c0392b", size = 2.8,
+             label.padding = unit(0.3, "cm")) +
+  geom_segment(aes(x = 5, xend = 5, y = 9.5, yend = 8.5), arrow = arrow(length = unit(0.2, "cm"))) +
+  geom_segment(aes(x = 5, xend = 5, y = 7.5, yend = 6.5), arrow = arrow(length = unit(0.2, "cm"))) +
+  geom_segment(aes(x = 5, xend = 5, y = 5.5, yend = 4.7), arrow = arrow(length = unit(0.2, "cm"))) +
+  geom_segment(aes(x = 5, xend = 5, y = 3.5, yend = 2.5), arrow = arrow(length = unit(0.2, "cm"))) +
+  geom_segment(aes(x = 6.2, xend = 8, y = 8, yend = 8), arrow = arrow(length = unit(0.2, "cm")), color = "#c0392b") +
+  geom_segment(aes(x = 6.2, xend = 8, y = 6, yend = 6), arrow = arrow(length = unit(0.2, "cm")), color = "#c0392b") +
+  geom_segment(aes(x = 6.2, xend = 8, y = 4, yend = 4), arrow = arrow(length = unit(0.2, "cm")), color = "#c0392b") +
+  xlim(2, 12) + ylim(1, 11) +
+  labs(title = "PRISMA Flow Diagram",
+       subtitle = "Simulated example based on Joshi R et al. TB systematic review") +
+  theme_void() +
+  theme(plot.title = element_text(face = "bold", size = 14),
+        plot.subtitle = element_text(size = 11, color = "gray40"))
+```
+
+## When NOT to Meta-Analyse {.smaller}
+
+::: {.callout-warning}
+
+1. **Extreme clinical heterogeneity** — apples and oranges
+2. **Very high I²** with no identifiable source
+3. **Only 2–3 studies** — narrative synthesis is better
+4. **High risk of bias** in most studies — precise but wrong
+5. **Contradictory results** with plausible mechanistic reasons
+:::
+
+. . .
+
+**Teaching example:** Pralidoxime in organophosphorus poisoning
+
+- Earlier observational studies suggested benefit
+- Eddleston, **Joshi R** et al. (*PLoS Med* 2009): double-blind RCT (n = 235)
+- Result: pralidoxime group had **higher mortality** (24.8% vs 15.8%)
+- Pooling the RCT with weaker observational studies would **dilute** the stronger signal
+
+. . .
+
+**A single strong RCT can be more informative than a meta-analysis of many weak studies.**
+
+## Sensitivity Analysis — Testing Robustness {.smaller}
+
+| **Analysis** | **What you change** | **What it tests** |
+|---|---|---|
+| Exclude high-RoB studies | Drop biased studies | Is the effect driven by bias? |
+| Fixed vs random effects | Switch the model | Does between-study variation matter? |
+| Leave-one-out | Remove each study in turn | Is one study driving the result? |
+| Restrict to RCTs | Drop observational studies | Consistent in stronger designs? |
+| Trim-and-fill | Impute missing studies | Publication bias impact? |
+
+. . .
+
+If the pooled estimate **changes substantially** → the conclusion is **not robust**.
+
+Report this transparently.
+
+## Identify the Analysis — Vignette 1 {.smaller}
+
+A team finds **15 RCTs** comparing albendazole vs placebo for soil-transmitted helminths in Indian schoolchildren. Each trial reports cure rate. The trials use different doses (200 mg vs 400 mg) and follow-up periods (1 week vs 4 weeks). I² = 72%.
+
+. . .
+
+**Random-effects meta-analysis with subgroup analysis** — High heterogeneity (72%) warrants investigation. Subgroup by dose and follow-up duration. A fixed-effect model would be inappropriate given the substantial I².
+
+## Identify the Analysis — Vignette 2 {.smaller}
+
+A systematic review of **Mycobacterium w (Mw)** as COVID-19 adjunct therapy finds **2 small open-label trials** (n = 40 and n = 55) with opposite results. Trial 1 shows benefit; Trial 2 shows no effect. Both are high risk of bias (unblinded, small).
+
+. . .
+
+**Do NOT meta-analyse.** Only 2 studies, opposite results, both high RoB. A pooled estimate would be misleading — **narrative synthesis** is the appropriate approach. Wait for larger, blinded RCTs before pooling.
+
+## Identify the Analysis — Vignette 3 {.smaller}
+
+You are reviewing a Cochrane systematic review of statins for primary prevention of cardiovascular disease. The forest plot shows 12 RCTs with a pooled RR = 0.75 (95% CI: 0.70–0.81), I² = 15%. The funnel plot is symmetric. GRADE rates the evidence as **High**.
+
+. . .
+
+**This is a well-conducted meta-analysis.** Low heterogeneity (I² = 15%), symmetric funnel plot (no publication bias), high GRADE quality. The pooled RR = 0.75 means a **25% reduction** in cardiovascular events — a robust, clinically meaningful result.
+
+## Common Mistakes {.smaller}
+
+:::: {.callout-warning}
+
+1. **Pooling apples and oranges** — combining clinically incompatible studies
+2. **Ignoring I²** — reporting a pooled estimate without assessing heterogeneity
+3. **Choosing the model post-hoc** — switching to fixed-effect because it gives a "better" p-value
+4. **Equating statistical significance with clinical importance** — a significant pooled OR = 1.05 may be trivial
+5. **No sensitivity analysis** — only reporting one set of results
+6. **Funnel plot with < 10 studies** — insufficient power to detect asymmetry
+7. **Confusing random-effects with random sampling** — the "random" refers to study effects, not patient selection
+8. **Ignoring GRADE** — a significant result from very-low-quality evidence is not compelling
+::::
+
+## Key Takeaways
+
+::: {.incremental}
+1. **Systematic review first, meta-analysis second** — never pool without structured search
+2. **Forest plot** = squares (studies), diamond (pooled), vertical line at null
+3. **Random-effects** is the safer default when heterogeneity is uncertain
+4. **I² > 75%** → stop, investigate, consider subgroup analysis before pooling
+5. **Funnel plot** asymmetry suggests publication bias (needs ≥ 10 studies)
+6. **GRADE** rates overall evidence quality — significant ≠ high quality
+7. **Sensitivity analysis is not optional** — vary assumptions, test robustness
+8. **A single strong RCT** (like the pralidoxime trial) can be more informative than a meta-analysis of many weak studies
+:::

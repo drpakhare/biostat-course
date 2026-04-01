@@ -1,0 +1,443 @@
+---
+title: "Bayesian Statistics — Basics"
+subtitle: "Updating Beliefs with Evidence"
+format:
+  revealjs:
+    theme: [default, ../styles-slides.css]
+    embed-resources: true
+    slide-number: true
+    show-slide-number: all
+    chalkboard: false
+    scrollable: true
+    footer: "Biostatistics for Clinicians | Module 14"
+    transition: fade
+    incremental: false
+    code-fold: true
+    fig-align: center
+    width: 1280
+    height: 720
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{r}
+#| label: setup
+#| include: false
+library(tidyverse)
+library(kableExtra)
+library(patchwork)
+library(scales)
+set.seed(42)
+```
+
+## Learning Objectives
+
+::: {.incremental}
+1. Explain the **Bayesian framework**: prior, likelihood, and posterior
+2. Distinguish **frequentist vs Bayesian** inference
+3. Interpret **posterior distributions** and credible intervals
+4. Understand how **prior choice** affects conclusions
+5. Apply Bayesian thinking to **clinical diagnosis**
+6. Interpret **Bayes factors** as evidence for or against hypotheses
+7. Recognise when Bayesian methods offer advantages
+:::
+
+## Clinical Hook: Screening for OSA {.smaller}
+
+::: {.columns}
+::: {.column width="55%"}
+A 48-year-old man: daytime sleepiness, loud snoring, morning headaches.
+
+**BLESS cohort** (Pakhare, Joshi A, AIIMS Bhopal, 2024):
+
+- 1,015 adults with gold-standard polysomnography
+- **30.5%** had moderate-severe OSA
+- This is your **prior probability**
+
+. . .
+
+You administer the **SONA questionnaire** (Joshi A, Goyal A, Pakhare A, 2025):
+
+- Sensitivity: **73%**, Specificity: **78%**
+- Patient scores positive
+
+**What is the probability he has OSA now?**
+
+This is **Bayesian reasoning** — updating a prior belief with new evidence.
+:::
+
+::: {.column width="45%"}
+```{r}
+#| fig-height: 5
+#| fig-width: 5.5
+
+prior <- 0.305
+sens <- 0.73
+spec <- 0.78
+post_pos <- (sens * prior) / (sens * prior + (1 - spec) * (1 - prior))
+post_neg <- ((1 - sens) * prior) / ((1 - sens) * prior + spec * (1 - prior))
+
+bar_df <- tibble(
+  stage = c("Pre-test\n(prior)", "Post-test\n(SONA +)", "Post-test\n(SONA −)"),
+  prob = c(prior, post_pos, post_neg) * 100,
+  fill = c("#3498db", "#e74c3c", "#2c3e50")
+) %>% mutate(stage = fct_inorder(stage))
+
+ggplot(bar_df, aes(x = stage, y = prob, fill = stage)) +
+  geom_col(width = 0.6) +
+  geom_text(aes(label = paste0(round(prob, 1), "%")), vjust = -0.5, fontface = "bold", size = 5) +
+  scale_fill_manual(values = c("#3498db", "#e74c3c", "#2c3e50")) +
+  ylim(0, 75) +
+  labs(title = "Bayesian Updating with SONA",
+       x = NULL, y = "Probability of OSA (%)") +
+  theme_minimal(base_size = 14) +
+  theme(legend.position = "none", plot.title = element_text(face = "bold"))
+```
+:::
+:::
+
+## The Bayesian Formula {.smaller}
+
+$$P(\text{Disease} \mid \text{Test}^+) = \frac{P(\text{Test}^+ \mid \text{Disease}) \times P(\text{Disease})}{P(\text{Test}^+)}$$
+
+. . .
+
+**In words:** Posterior = (Likelihood × Prior) / Evidence
+
+. . .
+
+| Component | Meaning | OSA Example |
+|---|---|---|
+| **Prior** | Belief before test | Prevalence = 30.5% |
+| **Likelihood** | P(data \| hypothesis) | Sensitivity = 73% |
+| **Evidence** | P(data overall) | P(SONA+) = 37.5% |
+| **Posterior** | Updated belief | **`r round(post_pos*100, 1)`%** |
+
+. . .
+
+**The same positive test gives different answers depending on the prior.** In a low-prevalence population (5%), the post-test probability would be only `r round((sens * 0.05) / (sens * 0.05 + (1-spec) * 0.95) * 100, 1)`%.
+
+## Prior × Likelihood → Posterior {.smaller}
+
+```{r}
+#| fig-height: 5.5
+#| fig-width: 10
+
+x_bf <- seq(0, 1, length.out = 500L)
+prior_d <- dbeta(x_bf, 6, 14)
+like_d <- dbeta(x_bf, 45 + 1, 55 + 1)
+like_d <- like_d / max(like_d) * max(prior_d) * 1.2
+post_d <- dbeta(x_bf, 51, 69)
+
+df_bayes <- bind_rows(
+  tibble(theta = x_bf, density = prior_d, component = "Prior"),
+  tibble(theta = x_bf, density = like_d, component = "Likelihood (scaled)"),
+  tibble(theta = x_bf, density = post_d, component = "Posterior")
+) %>% mutate(component = fct_inorder(component))
+
+ggplot(df_bayes, aes(x = theta, y = density, color = component, linetype = component)) +
+  geom_line(linewidth = 1.3) +
+  scale_color_manual(values = c("#3498db", "#e67e22", "#e74c3c")) +
+  scale_linetype_manual(values = c("dashed", "dotted", "solid")) +
+  labs(title = "Bayesian Updating: Prior × Likelihood → Posterior",
+       subtitle = "Prior centred ~30% | Data: 45/100 positive | Posterior: compromise",
+       x = "Proportion (θ)", y = "Density", color = NULL, linetype = NULL) +
+  theme_minimal(base_size = 14) +
+  theme(legend.position = c(0.82, 0.8), plot.title = element_text(face = "bold"),
+        legend.background = element_rect(fill = "white", color = "gray80"))
+```
+
+**The posterior is ALWAYS a compromise.** More data → posterior follows data. Less data → prior dominates.
+
+## Frequentist vs Bayesian {.smaller}
+
+| | **Frequentist** | **Bayesian** |
+|---|---|---|
+| **Probability** | Long-run frequency | Degree of belief |
+| **Parameters** | Fixed but unknown | Random variables |
+| **Prior info** | Not formally used | Explicitly incorporated |
+| **Result** | p-value, CI | Posterior, credible interval |
+| **Interpretation** | "If repeated infinitely..." | "Given the data..." |
+
+. . .
+
+**The p-value problem:** p = 0.04 does NOT mean "4% chance the null is true."
+
+A **95% CI** does NOT mean "95% probability the true value is in here."
+
+A **95% credible interval** DOES mean exactly that.
+
+## Confidence Interval vs Credible Interval {.smaller}
+
+```{r}
+#| fig-height: 5
+#| fig-width: 10
+
+set.seed(42)
+true_mean <- 120; n <- 25; n_sims <- 15
+
+freq_sims <- tibble(
+  sim = 1:n_sims,
+  mean = rnorm(n_sims, true_mean, 15/sqrt(n)),
+  se = 15/sqrt(n)
+) %>% mutate(lo = mean - 1.96 * se, hi = mean + 1.96 * se,
+             covers = lo <= true_mean & hi >= true_mean)
+
+p1 <- ggplot(freq_sims, aes(y = sim)) +
+  geom_point(aes(x = mean, color = covers), size = 2) +
+  geom_errorbarh(aes(xmin = lo, xmax = hi, color = covers), height = 0.3) +
+  geom_vline(xintercept = true_mean, linetype = "dashed") +
+  scale_color_manual(values = c("TRUE" = "#2c3e50", "FALSE" = "#e74c3c"), guide = "none") +
+  labs(title = "Frequentist: many experiments,\nmany different CIs", x = "SBP (mmHg)", y = "Experiment") +
+  theme_minimal(base_size = 12) + theme(plot.title = element_text(face = "bold", size = 11))
+
+theta_b <- seq(110, 130, length.out = 500)
+post_sbp <- dnorm(theta_b, 119.5, 15/sqrt(n))
+cri_lo <- qnorm(0.025, 119.5, 15/sqrt(n))
+cri_hi <- qnorm(0.975, 119.5, 15/sqrt(n))
+
+p2 <- ggplot(tibble(x = theta_b, y = post_sbp), aes(x, y)) +
+  geom_line(linewidth = 1.3, color = "#e74c3c") +
+  geom_area(data = tibble(x = theta_b, y = post_sbp) %>% filter(x >= cri_lo & x <= cri_hi),
+            fill = "#e74c3c", alpha = 0.3) +
+  geom_vline(xintercept = true_mean, linetype = "dashed") +
+  annotate("text", x = 126, y = max(post_sbp) * 0.6,
+           label = paste0("95% CrI:\n[", round(cri_lo,1), ", ", round(cri_hi,1), "]"),
+           color = "#e74c3c", fontface = "bold") +
+  labs(title = "Bayesian: one posterior,\none credible interval", x = "SBP (mmHg)", y = "Density") +
+  theme_minimal(base_size = 12) + theme(plot.title = element_text(face = "bold", size = 11))
+
+p1 + p2
+```
+
+## Types of Priors {.smaller}
+
+```{r}
+#| fig-height: 5
+#| fig-width: 10
+
+x_pt <- seq(0, 1, length.out = 500L)
+priors_df <- bind_rows(
+  tibble(theta = x_pt, density = dbeta(x_pt, 1, 1), type = "Uninformative\nBeta(1,1)"),
+  tibble(theta = x_pt, density = dbeta(x_pt, 2, 2), type = "Weakly informative\nBeta(2,2)"),
+  tibble(theta = x_pt, density = dbeta(x_pt, 6, 14), type = "Informative\nBeta(6,14)"),
+  tibble(theta = x_pt, density = dbeta(x_pt, 60, 140), type = "Strongly informative\nBeta(60,140)")
+) %>% mutate(type = fct_inorder(type))
+
+ggplot(priors_df, aes(x = theta, y = density, color = type)) +
+  geom_line(linewidth = 1.2) +
+  facet_wrap(~type, scales = "free_y") +
+  scale_color_manual(values = c("#95a5a6", "#3498db", "#e67e22", "#e74c3c")) +
+  labs(title = "Types of Prior Distributions",
+       x = "Proportion (θ)", y = "Density") +
+  theme_minimal(base_size = 13) +
+  theme(legend.position = "none", strip.text = element_text(face = "bold"),
+        plot.title = element_text(face = "bold"))
+```
+
+. . .
+
+**Uninformative** = know nothing | **Informative** = prior studies | **Strongly informative** = large prior data
+
+## Who Wins: Prior or Data? {.smaller}
+
+```{r}
+#| fig-height: 5
+#| fig-width: 10
+
+x_pc <- seq(0, 1, length.out = 500L)
+conflict_df <- bind_rows(
+  tibble(theta = x_pc, density = dbeta(x_pc, 30, 70), label = "Prior (centred 30%)"),
+  tibble(theta = x_pc, density = dbeta(x_pc, 42, 78), label = "n = 20 (data: 60%)"),
+  tibble(theta = x_pc, density = dbeta(x_pc, 90, 110), label = "n = 100 (data: 60%)"),
+  tibble(theta = x_pc, density = dbeta(x_pc, 330, 270), label = "n = 500 (data: 60%)")
+) %>% mutate(label = fct_inorder(label))
+
+ggplot(conflict_df, aes(x = theta, y = density, color = label)) +
+  geom_line(linewidth = 1.2) +
+  scale_color_manual(values = c("#3498db", "#27ae60", "#e67e22", "#e74c3c")) +
+  geom_vline(xintercept = 0.30, linetype = "dashed", color = "#3498db", alpha = 0.5) +
+  geom_vline(xintercept = 0.60, linetype = "dashed", color = "#e74c3c", alpha = 0.5) +
+  labs(title = "With More Data, the Data Win",
+       subtitle = "Prior centred at 30% vs data suggesting 60%",
+       x = "Proportion (θ)", y = "Density", color = NULL) +
+  theme_minimal(base_size = 14) +
+  theme(legend.position = "right", plot.title = element_text(face = "bold"))
+```
+
+## Bayes Factor — Evidence for or Against {.smaller}
+
+$$BF_{10} = \frac{P(\text{Data} \mid H_1)}{P(\text{Data} \mid H_0)}$$
+
+| **BF₁₀** | **Interpretation** |
+|:---:|---|
+| < 1 | Evidence favours **null** (H₀) |
+| 1–3 | Anecdotal evidence for H₁ |
+| 3–10 | Moderate evidence for H₁ |
+| 10–30 | Strong evidence |
+| > 100 | Extreme evidence |
+
+. . .
+
+**Key advantage over p-values:** A p-value can never support the null. A Bayes factor **can**.
+
+BF₁₀ = 0.15 means BF₀₁ = 6.7 → moderate evidence **for** no treatment effect.
+
+## Diagnostic Reasoning Is Bayesian {.smaller}
+
+```{r}
+#| fig-height: 5.5
+#| fig-width: 10
+
+prev_range <- seq(0.05, 0.80, by = 0.01)
+sens <- 0.73; spec <- 0.78
+
+post_pos <- (sens * prev_range) / (sens * prev_range + (1 - spec) * (1 - prev_range))
+post_neg <- ((1 - sens) * prev_range) / ((1 - sens) * prev_range + spec * (1 - prev_range))
+
+diag_df <- tibble(
+  prior = rep(prev_range, 2),
+  posterior = c(post_pos, post_neg),
+  result = rep(c("SONA Positive", "SONA Negative"), each = length(prev_range))
+)
+
+ggplot(diag_df, aes(x = prior * 100, y = posterior * 100, color = result)) +
+  geom_line(linewidth = 1.3) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "gray50") +
+  scale_color_manual(values = c("SONA Positive" = "#e74c3c", "SONA Negative" = "#2c3e50")) +
+  labs(title = "Post-Test Probability Depends on Pre-Test Probability",
+       subtitle = "SONA questionnaire for OSA screening (Pakhare, Joshi A, AIIMS Bhopal)",
+       x = "Pre-test probability (%)", y = "Post-test probability (%)", color = NULL) +
+  theme_minimal(base_size = 14) +
+  theme(legend.position = c(0.2, 0.85), plot.title = element_text(face = "bold"),
+        legend.background = element_rect(fill = "white", color = "gray80"))
+```
+
+## Bayesian Updating in Practice {.smaller}
+
+**The Pralidoxime Story** (Eddleston, Joshi R et al., *PLoS Med* 2009):
+
+```{r}
+#| fig-height: 4.5
+#| fig-width: 10
+
+x_pral <- seq(-1.5, 1.5, length.out = 500L)
+post_var <- 1 / (1/0.3^2 + 1/0.25^2)
+post_mean <- post_var * (-0.36/0.3^2 + 0.52/0.25^2)
+
+pral_df <- bind_rows(
+  tibble(theta = x_pral, density = dnorm(x_pral, -0.36, 0.3), component = "Prior (beneficial, HR \u2248 0.7)"),
+  tibble(theta = x_pral, density = dnorm(x_pral, 0.52, 0.25), component = "RCT data (harmful, HR \u2248 1.69)"),
+  tibble(theta = x_pral, density = dnorm(x_pral, post_mean, sqrt(post_var)), component = "Posterior (updated)")
+) %>% mutate(component = fct_inorder(component))
+
+post_pral <- dnorm(x_pral, post_mean, sqrt(post_var))
+
+ggplot(pral_df, aes(x = exp(theta), y = density, color = component, linetype = component)) +
+  geom_line(linewidth = 1.3) +
+  geom_vline(xintercept = 1, linetype = "dashed", color = "gray50") +
+  scale_color_manual(values = c("#3498db", "#e67e22", "#e74c3c")) +
+  scale_linetype_manual(values = c("dashed", "dotted", "solid")) +
+  scale_x_continuous(breaks = c(0.3, 0.5, 0.7, 1, 1.5, 2, 3), trans = "log", limits = c(0.2, 4)) +
+  annotate("text", x = 0.4, y = max(post_pral) * 0.5, label = "← Benefit", color = "gray50") +
+  annotate("text", x = 2.5, y = max(post_pral) * 0.5, label = "Harm →", color = "gray50") +
+  labs(title = "Pralidoxime: Prior Belief Overturned by RCT Data",
+       x = "Hazard Ratio (log scale)", y = "Density", color = NULL, linetype = NULL) +
+  theme_minimal(base_size = 13) +
+  theme(legend.position = "right", plot.title = element_text(face = "bold"))
+```
+
+. . .
+
+**Being Bayesian means being willing to update** — even when the data contradict your beliefs.
+
+## ROPE: Clinically Meaningful Decisions {.smaller}
+
+**Region of Practical Equivalence** — is the effect big enough to matter?
+
+```{r}
+#| fig-height: 4.5
+#| fig-width: 10
+
+theta <- seq(-15, 15, length.out = 500)
+post_effect <- dnorm(theta, 3.2, 2.5)
+df_rope <- tibble(theta = theta, density = post_effect)
+
+ggplot(df_rope, aes(x = theta, y = density)) +
+  geom_line(linewidth = 1.3, color = "#2c3e50") +
+  geom_area(data = df_rope %>% filter(theta >= -2 & theta <= 2),
+            fill = "#f39c12", alpha = 0.3) +
+  geom_vline(xintercept = c(-2, 2), linetype = "dashed", color = "#f39c12") +
+  annotate("text", x = 0, y = max(post_effect) * 1.1, label = "ROPE\n(clinically negligible)",
+           fontface = "bold", color = "#f39c12", size = 4) +
+  labs(title = "ROPE Analysis: Is the SBP Reduction Clinically Meaningful?",
+       subtitle = "ROPE = [−2, 2] mmHg | Posterior mean = 3.2 mmHg",
+       x = "SBP Reduction (mmHg)", y = "Posterior Density") +
+  theme_minimal(base_size = 14) +
+  theme(plot.title = element_text(face = "bold"))
+```
+
+. . .
+
+- 95% outside ROPE → **clinically meaningful** | 95% inside ROPE → **practically null** | Straddles → **undecided**
+
+## Identify the Approach — Vignette 1 {.smaller}
+
+A new rapid diagnostic test for TB has sensitivity 92% and specificity 88%. In a tribal district of MP, TB prevalence is 500 per 100,000 (0.5%). A patient with chronic cough tests positive.
+
+**What is the post-test probability of active TB?**
+
+. . .
+
+```{r}
+#| results: asis
+prev_tb <- 0.005; sens_tb <- 0.92; spec_tb <- 0.88
+post_tb <- (sens_tb * prev_tb) / (sens_tb * prev_tb + (1 - spec_tb) * (1 - prev_tb))
+```
+
+**Bayesian calculation:** P(TB | Test+) = (0.92 × 0.005) / (0.92 × 0.005 + 0.12 × 0.995) = **`r round(post_tb * 100, 1)`%**
+
+Even with a positive test, the probability is only ~3.7% because the **prior is extremely low**. The prior dominates when prevalence is very low. This is why mass screening for rare diseases generates many false positives.
+
+## Identify the Approach — Vignette 2 {.smaller}
+
+An RCT of a new antihypertensive (n = 40) finds mean SBP reduction of 6 mmHg (95% CI: −1 to 13, p = 0.09). A frequentist concludes "not significant." A Bayesian analysis with an informative prior (from a related drug class showing 5 mmHg benefit) gives a posterior mean of 5.8 mmHg, 95% CrI [1.2, 10.4].
+
+. . .
+
+**The Bayesian analysis borrows strength from prior knowledge** and concludes there is a >97.5% probability of *some* benefit. The frequentist analysis, ignoring prior information, cannot reject the null. Both are valid approaches — but the Bayesian one incorporates more information and gives a more clinically useful answer for a small trial.
+
+## Identify the Approach — Vignette 3 {.smaller}
+
+A pharmaceutical company tests whether a generic drug is equivalent to the branded version. The RCT (n = 500) yields p = 0.42 for the difference. The company claims "no difference — the drugs are equivalent."
+
+. . .
+
+**A p-value cannot prove equivalence** — it only fails to reject a difference. A Bayesian analysis with BF₁₀ = 0.08 (BF₀₁ = 12.5) would provide **strong evidence for equivalence**. The Bayes factor directly quantifies evidence for the null hypothesis, which is exactly what's needed here.
+
+## Common Misconceptions {.smaller}
+
+:::: {.callout-warning}
+
+1. **"Bayesian = subjective = unreliable"** → The prior is explicit and transparent; frequentist assumptions are hidden
+2. **"You can choose any prior you want"** → Sensitivity analysis tests robustness; reviewers check priors
+3. **"Bayesian always disagrees with frequentist"** → For large samples with weak priors, they converge
+4. **"A flat prior = no assumptions"** → Flat on [0,1] says all values equally likely — that IS an assumption
+5. **"You need special software"** → R (brms), Python (PyMC), JASP (free GUI) all support Bayesian
+6. **"Too complicated for clinical research"** → The concept (update beliefs with evidence) is simpler than p-value logic
+::::
+
+## Key Takeaways
+
+::: {.incremental}
+1. **You're already Bayesian** — clinical diagnosis uses pre-test probability + LR = post-test probability
+2. **Prior × Likelihood → Posterior** — the posterior is a compromise
+3. **With enough data, the prior barely matters** — Bayesian and frequentist converge
+4. **Credible intervals** answer the question clinicians actually want
+5. **Bayes factors** can support the null — p-values cannot
+6. **ROPE** replaces "p < 0.05" with clinically meaningful decisions
+7. **Always do sensitivity analysis** — show results with alternative priors
+8. **Being Bayesian = being willing to update** — even when data contradict your beliefs
+:::

@@ -1,0 +1,486 @@
+---
+title: "Machine Learning in Medical Sciences"
+subtitle: "When Algorithms Meet Clinical Data"
+format:
+  revealjs:
+    theme: [default, ../styles-slides.css]
+    embed-resources: true
+    slide-number: true
+    show-slide-number: all
+    chalkboard: false
+    scrollable: true
+    footer: "Biostatistics for Clinicians | Module 15"
+    transition: fade
+    incremental: false
+    code-fold: true
+    fig-align: center
+    width: 1280
+    height: 720
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{r}
+#| label: setup
+#| include: false
+library(tidyverse)
+library(kableExtra)
+library(patchwork)
+library(scales)
+set.seed(42)
+```
+
+## Learning Objectives
+
+::: {.incremental}
+1. Distinguish **supervised** from **unsupervised** learning
+2. Understand common algorithms: logistic regression, decision trees, random forests
+3. Explain the **bias-variance trade-off** and overfitting
+4. Interpret **AUC, sensitivity, specificity** as ML evaluation metrics
+5. Understand **training, validation, and test sets**
+6. Evaluate ML claims in medical literature critically
+7. Recognise **ethical concerns** of ML in healthcare
+:::
+
+## Clinical Hook: The SONA Score {.smaller}
+
+::: {.columns}
+::: {.column width="55%"}
+The AIIMS Bhopal team built the **SONA questionnaire** for OSA screening (Joshi A, Goyal A, Pakhare A, 2025):
+
+1. **Data:** 1,015 adults (BLESS cohort), all with PSG
+2. **Split:** Training (n = 732) / Testing (n = 244)
+3. **Models:** Four predictive models compared
+4. **Selection:** Best model by AUC = **0.83**
+5. **Validation:** Confirmed on held-out test set
+6. **Deploy:** Coefficients → simple point score
+
+. . .
+
+**This IS machine learning** — even though it used logistic regression. ML is not about fancy algorithms. It's about the **discipline of training on one dataset and testing on another.**
+:::
+
+::: {.column width="45%"}
+```{r}
+#| fig-height: 5
+#| fig-width: 5.5
+
+steps_df <- tibble(
+  step = c("Collect\ndata", "Split\ntrain/test", "Build\nmodels", "Evaluate\non test", "Deploy\nscore"),
+  y = 5:1,
+  icon = c("📊", "✂️", "🔧", "✅", "🏥")
+)
+
+ggplot(steps_df, aes(x = 1, y = y)) +
+  geom_tile(width = 1.8, height = 0.8, fill = c("#3498db", "#e67e22", "#9b59b6", "#27ae60", "#e74c3c"),
+            alpha = 0.85) +
+  geom_text(aes(label = step), color = "white", fontface = "bold", size = 4.5) +
+  geom_segment(aes(x = 1, xend = 1, y = y - 0.45, yend = y - 0.55),
+               data = steps_df %>% filter(y > 1),
+               arrow = arrow(length = unit(0.15, "cm")), color = "gray40") +
+  xlim(0, 2) + ylim(0.3, 5.7) +
+  labs(title = "ML Pipeline: SONA Development") +
+  theme_void() +
+  theme(plot.title = element_text(face = "bold", size = 14, hjust = 0.5))
+```
+:::
+:::
+
+## What Is Machine Learning? {.smaller}
+
+**Algorithms that learn patterns from data to make predictions — without explicit rules.**
+
+| | **Traditional Statistics** | **Machine Learning** |
+|---|---|---|
+| **Goal** | Understand relationships (inference) | Make accurate predictions |
+| **Model choice** | Theory-driven | Data-driven |
+| **Interpretability** | Usually high | Variable |
+| **Validation** | CI, p-values | Train/test split, AUC |
+| **Overfitting** | Managed by theory | Managed by held-out test data |
+
+. . .
+
+::: {.callout-tip}
+**Logistic regression is BOTH statistics and ML.** The difference isn't the math — it's how you use it. Inference → statistics. Prediction with train/test → ML.
+:::
+
+## Supervised vs Unsupervised Learning {.smaller}
+
+::: {.columns}
+::: {.column width="50%"}
+### Supervised
+Algorithm learns from **labelled** examples.
+
+| Task | Output | Example |
+|---|---|---|
+| **Classification** | Category | OSA yes/no |
+| **Regression** | Number | Predict AHI |
+
+```{r}
+#| fig-height: 4
+#| fig-width: 5
+
+set.seed(42)
+osa_data <- tibble(
+  waist = c(rnorm(80, 98, 10), rnorm(80, 85, 10)),
+  neck = c(rnorm(80, 39, 3), rnorm(80, 34, 3)),
+  osa = factor(rep(c("OSA", "No OSA"), each = 80))
+)
+ggplot(osa_data, aes(x = waist, y = neck, color = osa)) +
+  geom_point(size = 2, alpha = 0.6) +
+  scale_color_manual(values = c("#e74c3c", "#2c3e50")) +
+  geom_abline(intercept = -10, slope = 0.5, linetype = "dashed", color = "#f39c12", linewidth = 1) +
+  labs(title = "Classification", x = "Waist (cm)", y = "Neck (cm)", color = NULL) +
+  theme_minimal(base_size = 12) + theme(plot.title = element_text(face = "bold"), legend.position = "bottom")
+```
+:::
+
+::: {.column width="50%"}
+### Unsupervised
+Algorithm finds **hidden structure** — no labels.
+
+| Task | What | Example |
+|---|---|---|
+| **Clustering** | Groups | HTN subtypes |
+| **Dimensionality** | Compress | Gene expression |
+
+```{r}
+#| fig-height: 4
+#| fig-width: 5
+
+set.seed(42)
+cl_data <- tibble(
+  sbp = c(rnorm(50, 125, 8), rnorm(40, 155, 10), rnorm(35, 140, 12)),
+  bmi = c(rnorm(50, 24, 3), rnorm(40, 32, 4), rnorm(35, 28, 3)),
+  cluster = factor(c(rep("Low risk", 50), rep("High risk", 40), rep("Moderate", 35)))
+)
+ggplot(cl_data, aes(x = sbp, y = bmi, color = cluster)) +
+  geom_point(size = 2, alpha = 0.6) +
+  scale_color_manual(values = c("#27ae60", "#e74c3c", "#f39c12")) +
+  labs(title = "Clustering", x = "SBP (mmHg)", y = "BMI", color = NULL) +
+  theme_minimal(base_size = 12) + theme(plot.title = element_text(face = "bold"), legend.position = "bottom")
+```
+:::
+:::
+
+## Common Algorithms {.smaller}
+
+```{r}
+#| results: asis
+
+algo_comp <- tibble(
+  Algorithm = c("Logistic regression", "Decision tree", "Random forest",
+                "Gradient boosting", "Neural network"),
+  Interpretability = c("★★★★★", "★★★★☆", "★★☆☆☆", "★★☆☆☆", "★☆☆☆☆"),
+  `Data needed` = c("Small–medium", "Small–medium", "Medium–large", "Medium–large", "Very large"),
+  `Best for` = c("Risk scores (SONA)", "Clinical decision rules",
+                 "Tabular clinical data", "Prediction competitions",
+                 "Images, text, ECG signals")
+)
+
+kable(algo_comp, format = "html") %>%
+  kable_styling(full_width = TRUE, font_size = 15) %>%
+  row_spec(0, background = "#2c3e50", color = "white", bold = TRUE) %>%
+  row_spec(1, background = "#d4edda")
+```
+
+. . .
+
+**For clinical screening tools** (like SONA), logistic regression is often the best choice — interpretable, works with smaller data, and coefficients convert to simple point scores.
+
+## Decision Tree — Intuitive Splits {.smaller}
+
+```{r}
+#| fig-height: 5.5
+#| fig-width: 10
+
+tree_df <- tibble(
+  x = c(5, 2.5, 7.5, 1.25, 3.75, 6.25, 8.75),
+  y = c(10, 7, 7, 4, 4, 4, 4),
+  label = c("Waist > 93 cm?", "Snoring?", "Neck > 37 cm?",
+            "Low risk\n(8%)", "Moderate\n(35%)", "Moderate\n(28%)", "High risk\n(72%)"),
+  fill = c("#d4e4f7", "#d4e4f7", "#d4e4f7", "#27ae60", "#f39c12", "#f39c12", "#e74c3c")
+)
+
+ggplot(tree_df) +
+  geom_label(aes(x = x, y = y, label = label, fill = fill),
+             size = 3.5, fontface = "bold", color = "white", label.padding = unit(0.4, "cm")) +
+  scale_fill_identity() +
+  geom_segment(aes(x = 5, xend = 2.5, y = 9.2, yend = 7.6), color = "gray50") +
+  geom_segment(aes(x = 5, xend = 7.5, y = 9.2, yend = 7.6), color = "gray50") +
+  geom_segment(aes(x = 2.5, xend = 1.25, y = 6.2, yend = 4.6), color = "gray50") +
+  geom_segment(aes(x = 2.5, xend = 3.75, y = 6.2, yend = 4.6), color = "gray50") +
+  geom_segment(aes(x = 7.5, xend = 6.25, y = 6.2, yend = 4.6), color = "gray50") +
+  geom_segment(aes(x = 7.5, xend = 8.75, y = 6.2, yend = 4.6), color = "gray50") +
+  annotate("text", x = 3.5, y = 8.3, label = "No", fontface = "bold", size = 4) +
+  annotate("text", x = 6.5, y = 8.3, label = "Yes", fontface = "bold", size = 4) +
+  annotate("text", x = c(1.7, 3.3, 6.7, 8.3), y = 5.3, label = c("No","Yes","No","Yes"),
+           fontface = "bold", size = 3.5) +
+  xlim(0, 10) + ylim(3, 11) +
+  labs(title = "Decision Tree for OSA Screening",
+       subtitle = "Simulated example — sequential yes/no splits") +
+  theme_void() + theme(plot.title = element_text(face = "bold", size = 14))
+```
+
+## The Bias-Variance Trade-off {.smaller}
+
+```{r}
+#| fig-height: 5
+#| fig-width: 10
+
+set.seed(42)
+complexity <- 1:15
+train_acc <- 1 - 0.3 * exp(-0.5 * complexity) + rnorm(15, 0, 0.01)
+test_acc <- 1 - 0.3 * exp(-0.3 * complexity) - 0.015 * (complexity - 5)^2 * (complexity > 5) / 25 + rnorm(15, 0, 0.01)
+train_acc <- pmin(train_acc, 0.99)
+test_acc <- pmin(test_acc, 0.95)
+
+acc_df <- tibble(
+  complexity = rep(complexity, 2),
+  accuracy = c(train_acc, test_acc),
+  set = rep(c("Training", "Test"), each = 15)
+)
+
+ggplot(acc_df, aes(x = complexity, y = accuracy * 100, color = set)) +
+  geom_line(linewidth = 1.3) + geom_point(size = 2) +
+  scale_color_manual(values = c("Training" = "#3498db", "Test" = "#e74c3c")) +
+  geom_vline(xintercept = 6, linetype = "dashed", color = "#27ae60") +
+  annotate("text", x = 7, y = 75, label = "Sweet\nspot", fontface = "bold", color = "#27ae60", size = 4) +
+  annotate("text", x = 3, y = 92, label = "Underfitting", color = "gray50", size = 3.5) +
+  annotate("text", x = 12, y = 80, label = "Overfitting", color = "gray50", size = 3.5) +
+  labs(title = "Training Accuracy Keeps Rising — Test Accuracy Peaks Then Falls",
+       x = "Model Complexity", y = "Accuracy (%)", color = NULL) +
+  theme_minimal(base_size = 14) +
+  theme(legend.position = c(0.15, 0.3), plot.title = element_text(face = "bold"),
+        legend.background = element_rect(fill = "white", color = "gray80"))
+```
+
+. . .
+
+**The gap between training and test accuracy = overfitting.** Training accuracy is advertising; test accuracy is truth.
+
+## Overfitting — The Central Problem {.smaller}
+
+```{r}
+#| fig-height: 4.5
+#| fig-width: 10
+
+set.seed(42)
+x <- seq(0, 10, length.out = 30)
+y_obs <- 3 + 0.5 * x + rnorm(30, 0, 1.5)
+df_fit <- tibble(x = x, y = y_obs)
+
+p1 <- ggplot(df_fit, aes(x, y)) + geom_point(size = 2, color = "#2c3e50") +
+  geom_smooth(method = "lm", formula = y ~ 1, se = FALSE, color = "#3498db", linewidth = 1.2) +
+  labs(title = "Underfit", subtitle = "Too simple") + theme_minimal(base_size = 11) +
+  theme(plot.title = element_text(face = "bold"))
+
+p2 <- ggplot(df_fit, aes(x, y)) + geom_point(size = 2, color = "#2c3e50") +
+  geom_smooth(method = "lm", se = FALSE, color = "#27ae60", linewidth = 1.2) +
+  labs(title = "Good fit", subtitle = "Captures the trend") + theme_minimal(base_size = 11) +
+  theme(plot.title = element_text(face = "bold"))
+
+p3 <- ggplot(df_fit, aes(x, y)) + geom_point(size = 2, color = "#2c3e50") +
+  geom_smooth(method = "loess", span = 0.15, se = FALSE, color = "#e74c3c", linewidth = 1.2) +
+  labs(title = "Overfit", subtitle = "Memorises noise") + theme_minimal(base_size = 11) +
+  theme(plot.title = element_text(face = "bold"))
+
+p1 + p2 + p3
+```
+
+. . .
+
+**Signs:** Training 98% → Test 65% | Too many features for sample size | Absurd predictions at extremes
+
+## Cross-Validation {.smaller}
+
+```{r}
+#| fig-height: 4
+#| fig-width: 10
+
+cv_df <- expand.grid(fold = 1:5, part = 1:5) %>%
+  mutate(role = ifelse(fold == part, "Test", "Train"),
+         label = ifelse(fold == part, "Test", ""))
+
+ggplot(cv_df, aes(x = part, y = fct_rev(factor(fold)), fill = role)) +
+  geom_tile(color = "white", linewidth = 1.5) +
+  geom_text(aes(label = label), fontface = "bold", color = "white", size = 5) +
+  scale_fill_manual(values = c("Train" = "#3498db", "Test" = "#e74c3c")) +
+  labs(title = "5-Fold Cross-Validation",
+       subtitle = "Each fold takes a turn as test set → average = final performance estimate",
+       x = "Data Partition", y = "Iteration", fill = NULL) +
+  theme_minimal(base_size = 14) + theme(panel.grid = element_blank(), plot.title = element_text(face = "bold"))
+```
+
+. . .
+
+**Use when:** Not enough data for a separate test set. More robust than a single split.
+
+## ROC Curve and AUC {.smaller}
+
+```{r}
+#| fig-height: 5
+#| fig-width: 10
+
+fpr <- seq(0, 1, length.out = 200)
+tpr_sona <- pbeta(fpr, 0.5, 0.3)
+tpr_stop <- pbeta(fpr, 0.65, 0.4)
+tpr_random <- fpr
+
+roc_df <- tibble(
+  fpr = rep(fpr, 3),
+  tpr = c(tpr_sona, tpr_stop, tpr_random),
+  model = rep(c("SONA (AUC = 0.83)", "STOP-Bang (AUC = 0.72)", "Random (AUC = 0.50)"), each = 200)
+) %>% mutate(model = fct_inorder(model))
+
+ggplot(roc_df, aes(x = fpr, y = tpr, color = model)) +
+  geom_line(linewidth = 1.3) +
+  scale_color_manual(values = c("#e74c3c", "#3498db", "gray60")) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "gray80") +
+  labs(title = "ROC Curves: Comparing OSA Screening Tools",
+       subtitle = "SONA outperforms STOP-Bang (Joshi A, Pakhare A, AIIMS Bhopal)",
+       x = "False Positive Rate (1 − Specificity)", y = "True Positive Rate (Sensitivity)",
+       color = NULL) +
+  theme_minimal(base_size = 14) +
+  theme(legend.position = c(0.65, 0.25), plot.title = element_text(face = "bold"),
+        legend.background = element_rect(fill = "white", color = "gray80"))
+```
+
+. . .
+
+**AUC:** 0.50 = coin flip | 0.70–0.79 = acceptable | **0.80–0.89 = excellent** | 0.90+ = outstanding
+
+## Accuracy Is Misleading {.smaller}
+
+Disease prevalence = 1%. Model predicts "no disease" for **everyone**.
+
+. . .
+
+| Metric | Value |
+|---|:---:|
+| **Accuracy** | **99%** ← looks great! |
+| Sensitivity | **0%** ← catches NOTHING |
+| Specificity | 100% |
+| PPV | Undefined |
+
+. . .
+
+::: {.callout-warning}
+**Never evaluate a model on accuracy alone.** With imbalanced classes, accuracy is meaningless. Always report sensitivity, specificity, PPV, NPV, and AUC.
+:::
+
+## ML in Indian Healthcare {.smaller}
+
+| Application | Technology | Impact |
+|---|---|---|
+| **Diabetic retinopathy** | Deep learning on retinal images (Google + Aravind Eye Hospital) | Screening where ophthalmologists are scarce |
+| **TB from chest X-ray** | CAD4TB, qXR (Qure.ai) — WHO recommended | Active case-finding in high-burden settings |
+| **ECG interpretation** | AI on portable ECG (SanketLife) | PHCs without cardiologists |
+| **OSA screening** | SONA score (AIIMS Bhopal) — logistic regression | Primary care tool for resource-limited settings |
+
+. . .
+
+**Common thread:** ML is most impactful where specialist access is limited — extending expert-level decisions to primary care.
+
+## Critical Appraisal of ML Papers {.smaller}
+
+```{r}
+#| results: asis
+
+tripod <- tibble(
+  `#` = 1:6,
+  Question = c(
+    "Was data split into training and testing?",
+    "Was external validation performed?",
+    "Were multiple metrics reported (not just accuracy)?",
+    "Was overfitting addressed?",
+    "Were predictors available at time of decision?",
+    "Is the model clinically useful (better than current practice)?"
+  ),
+  `Red flag` = c(
+    "Only training accuracy reported",
+    "Tested only where it was developed",
+    "Only accuracy or AUC",
+    "High accuracy + complex model + small sample",
+    "Predictors include future information (data leakage)",
+    "Marginal improvement over simple clinical rules"
+  )
+)
+
+kable(tripod, format = "html") %>%
+  kable_styling(full_width = TRUE, font_size = 14) %>%
+  row_spec(0, background = "#2c3e50", color = "white", bold = TRUE)
+```
+
+. . .
+
+**Cardinal rule:** If they only report training performance → the results are **meaningless**.
+
+## Ethical Concerns {.smaller}
+
+:::: {.callout-warning}
+
+1. **Algorithmic bias** — model trained on private hospital data fails in government hospital (different demographics, severity)
+2. **Black box problem** — if you can't explain *why* the model flagged a patient, should you trust it?
+3. **Data quality** — "ML on dirty data = confidently wrong answers"
+4. **Temporal drift** — disease patterns change; models need retraining
+5. **Accountability** — who is responsible when AI makes a wrong prediction?
+6. **Equity** — dermatology AI trained on light skin performs poorly on dark skin
+::::
+
+. . .
+
+**Always validate across diverse populations** before deployment.
+
+## Identify the Approach — Vignette 1 {.smaller}
+
+A district hospital has 5 years of lab data on 10,000 patients. They want to identify **hidden patient subtypes** among diabetics based on HbA1c trajectories, comorbidity patterns, and treatment responses — without predefining the groups.
+
+. . .
+
+**Unsupervised learning (clustering)** — There are no predefined labels; the goal is to discover natural groupings. K-means or hierarchical clustering could identify phenotypic subtypes of diabetes, potentially guiding personalised treatment strategies.
+
+## Identify the Approach — Vignette 2 {.smaller}
+
+A research team develops an AI system to detect **pneumothorax on chest X-rays** using 50,000 labelled images from a tertiary hospital. They report AUC = 0.97 on an internal test set. A PHC wants to deploy it.
+
+. . .
+
+**Supervised learning (classification) — but needs external validation first.** The AUC = 0.97 is on internal data. The PHC has different X-ray machines, image quality, and patient population. The model MUST be tested on PHC data before deployment. Internal AUC ≠ real-world performance.
+
+## Identify the Approach — Vignette 3 {.smaller}
+
+A researcher with data from 80 patients and 200 clinical variables builds a random forest model for predicting ICU mortality. Training accuracy is 96%. She has no separate test set.
+
+. . .
+
+**This is almost certainly overfitted.** 200 features on 80 patients (features > patients!) is a recipe for overfitting. The 96% training accuracy is meaningless without a test set. She should use cross-validation, reduce features (variable selection), or use a simpler model (logistic regression with ≤5 predictors).
+
+## Common Mistakes {.smaller}
+
+:::: {.callout-warning}
+
+1. **Testing on training data** — inflates accuracy
+2. **Reporting only accuracy** — misleading with class imbalance
+3. **Data leakage** — including future/outcome data in predictors
+4. **Too many features** — 200 variables on 80 patients = overfitting
+5. **No external validation** — model may only work at your hospital
+6. **Ignoring clinical context** — AUC 0.85 with no clinical workflow is useless
+7. **Claiming causation** — ML finds associations, not causes
+8. **Ignoring bias** — training on one population, deploying on another
+::::
+
+## Key Takeaways
+
+::: {.incremental}
+1. **ML = disciplined prediction** using train/test separation — not magic
+2. **Logistic regression IS ML** — SONA is a perfect example
+3. **Always ask for test set performance** — training accuracy is advertising
+4. **AUC alone is not enough** — report sensitivity, specificity, calibration
+5. **External validation is essential** — internal performance ≠ real-world
+6. **Interpretability matters** — if you can't explain it, clinicians won't trust it
+7. **Check for bias** — was training data representative of deployment population?
+8. **AI assists, humans decide** — ML is a diligent junior colleague, not a replacement
+:::
